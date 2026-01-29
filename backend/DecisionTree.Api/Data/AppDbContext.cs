@@ -91,7 +91,7 @@ public sealed class AppDbContext : DbContext
         // === TableColumn ===
         modelBuilder.Entity<TableColumn>(e =>
         {
-            e.ToTable("table_column");
+            e.ToTable("decision_tree_column");
 
             e.HasKey(x => x.Id);
 
