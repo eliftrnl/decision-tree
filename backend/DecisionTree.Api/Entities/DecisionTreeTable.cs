@@ -10,8 +10,7 @@ public class DecisionTreeTable
     public int DecisionTreeId { get; set; }
     public DecisionTree DecisionTree { get; set; } = null!;
 
-    public string TableCode { get; set; } = null!;
-    public string? TableName { get; set; }
+    public string TableName { get; set; } = null!;
     public TableDirection Direction { get; set; } = TableDirection.Input;
 
     public StatusCode StatusCode { get; set; } = StatusCode.Active;

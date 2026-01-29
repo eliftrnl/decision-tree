@@ -4,6 +4,7 @@ using DecisionTree.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DecisionTree.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260129111825_ConvertEnumsToInt")]
+    partial class ConvertEnumsToInt
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -144,8 +147,12 @@ namespace DecisionTree.Api.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("ColumnName")
+                    b.Property<string>("ColumnCode")
                         .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)");
+
+                    b.Property<string>("ColumnName")
                         .HasMaxLength(200)
                         .HasColumnType("varchar(200)");
 
@@ -193,7 +200,7 @@ namespace DecisionTree.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TableId", "ColumnName")
+                    b.HasIndex("TableId", "ColumnCode")
                         .IsUnique();
 
                     b.ToTable("table_column", (string)null);

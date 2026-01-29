@@ -4,6 +4,7 @@ using DecisionTree.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DecisionTree.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260129111444_RemoveTableCodeAndColumnType")]
+    partial class RemoveTableCodeAndColumnType
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -51,8 +54,10 @@ namespace DecisionTree.Api.Migrations
                         .HasColumnType("int")
                         .HasDefaultValue(1);
 
-                    b.Property<int>("StatusCode")
-                        .HasColumnType("int");
+                    b.Property<string>("StatusCode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)");
 
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("datetime(6)");
@@ -114,11 +119,15 @@ namespace DecisionTree.Api.Migrations
                     b.Property<int>("DecisionTreeId")
                         .HasColumnType("int");
 
-                    b.Property<int>("Direction")
-                        .HasColumnType("int");
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)");
 
-                    b.Property<int>("StatusCode")
-                        .HasColumnType("int");
+                    b.Property<string>("StatusCode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)");
 
                     b.Property<string>("TableName")
                         .IsRequired()
@@ -144,13 +153,19 @@ namespace DecisionTree.Api.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("ColumnName")
+                    b.Property<string>("ColumnCode")
                         .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)");
+
+                    b.Property<string>("ColumnName")
                         .HasMaxLength(200)
                         .HasColumnType("varchar(200)");
 
-                    b.Property<int>("DataType")
-                        .HasColumnType("int");
+                    b.Property<string>("DataType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)");
 
                     b.Property<string>("Description")
                         .HasMaxLength(500)
@@ -179,8 +194,10 @@ namespace DecisionTree.Api.Migrations
                     b.Property<int?>("Scale")
                         .HasColumnType("int");
 
-                    b.Property<int>("StatusCode")
-                        .HasColumnType("int");
+                    b.Property<string>("StatusCode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)");
 
                     b.Property<int>("TableId")
                         .HasColumnType("int");
@@ -193,7 +210,7 @@ namespace DecisionTree.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TableId", "ColumnName")
+                    b.HasIndex("TableId", "ColumnCode")
                         .IsUnique();
 
                     b.ToTable("table_column", (string)null);

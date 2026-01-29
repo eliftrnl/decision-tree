@@ -3,8 +3,7 @@ namespace DecisionTree.Api.Contracts.DecisionTrees;
 public record TableColumnDto(
     int Id,
     int TableId,
-    string ColumnCode,
-    string? ColumnName,
+    string ColumnName,
     string? ExcelHeaderName,
     string? Description,
     string DataType, // "String", "Int", "Decimal", "Date", "Boolean"
@@ -15,15 +14,13 @@ public record TableColumnDto(
     int? MaxLength,
     int? Precision,
     int? Scale,
-    string? ColumnType,
     DateTime? ValidFrom,
     DateTime? ValidTo
 );
 
 public record TableColumnCreateRequest(
     int TableId,
-    string ColumnCode,
-    string? ColumnName,
+    string ColumnName,
     string? ExcelHeaderName,
     string? Description,
     int DataType,
@@ -34,14 +31,12 @@ public record TableColumnCreateRequest(
     int? MaxLength,
     int? Precision,
     int? Scale,
-    string? ColumnType,
     DateTime? ValidFrom,
     DateTime? ValidTo
 );
 
 public record TableColumnUpdateRequest(
-    string ColumnCode,
-    string? ColumnName,
+    string ColumnName,
     string? ExcelHeaderName,
     string? Description,
     int DataType,
@@ -52,7 +47,6 @@ public record TableColumnUpdateRequest(
     int? MaxLength,
     int? Precision,
     int? Scale,
-    string? ColumnType,
     DateTime? ValidFrom,
     DateTime? ValidTo
 );

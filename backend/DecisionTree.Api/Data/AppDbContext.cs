@@ -33,9 +33,9 @@ public sealed class AppDbContext : DbContext
                 .IsRequired();
 
             e.Property(x => x.StatusCode)
-                .HasConversion<string>()
-                .HasColumnType("varchar(30)")
-                .HasMaxLength(30)
+                
+                
+                
                 .IsRequired();
 
             e.Property(x => x.SchemaVersion)
@@ -64,26 +64,23 @@ public sealed class AppDbContext : DbContext
 
             e.HasKey(x => x.Id);
 
-            e.Property(x => x.TableCode)
-                .HasMaxLength(150)
+            e.Property(x => x.TableName)
+                .HasMaxLength(200)
                 .IsRequired();
 
-            e.Property(x => x.TableName)
-                .HasMaxLength(200);
-
             e.Property(x => x.Direction)
-                .HasConversion<string>()
-                .HasColumnType("varchar(30)")
-                .HasMaxLength(30)
+                
+                
+                
                 .IsRequired();
 
             e.Property(x => x.StatusCode)
-                .HasConversion<string>()
-                .HasColumnType("varchar(30)")
-                .HasMaxLength(30)
+                
+                
+                
                 .IsRequired();
 
-            e.HasIndex(x => new { x.DecisionTreeId, x.TableCode }).IsUnique();
+            e.HasIndex(x => new { x.DecisionTreeId, x.TableName }).IsUnique();
 
             e.HasOne(x => x.DecisionTree)
                 .WithMany(x => x.Tables)
@@ -102,13 +99,9 @@ public sealed class AppDbContext : DbContext
                 .HasColumnType("int")
                 .IsRequired();
 
-            e.Property(x => x.ColumnCode)
-                .HasMaxLength(150)
-                .IsRequired();
-
             e.Property(x => x.ColumnName)
                 .HasMaxLength(200)
-                .IsRequired(false);
+                .IsRequired();
 
             e.Property(x => x.ExcelHeaderName)
                 .HasMaxLength(150)
@@ -119,9 +112,9 @@ public sealed class AppDbContext : DbContext
                 .IsRequired(false);
 
             e.Property(x => x.DataType)
-                .HasConversion<string>()
-                .HasColumnType("varchar(30)")
-                .HasMaxLength(30)
+                
+                
+                
                 .IsRequired();
 
             e.Property(x => x.IsRequired)
@@ -129,9 +122,9 @@ public sealed class AppDbContext : DbContext
                 .IsRequired();
 
             e.Property(x => x.StatusCode)
-                .HasConversion<string>()
-                .HasColumnType("varchar(30)")
-                .HasMaxLength(30)
+                
+                
+                
                 .IsRequired();
 
             e.Property(x => x.OrderIndex)
@@ -155,11 +148,6 @@ public sealed class AppDbContext : DbContext
                 .HasColumnType("int")
                 .IsRequired(false);
 
-            e.Property(x => x.ColumnType)
-                .HasColumnType("varchar(50)")
-                .HasMaxLength(50)
-                .IsRequired(false);
-
             e.Property(x => x.ValidFrom)
                 .HasColumnType("datetime(6)")
                 .IsRequired(false);
@@ -168,7 +156,7 @@ public sealed class AppDbContext : DbContext
                 .HasColumnType("datetime(6)")
                 .IsRequired(false);
 
-            e.HasIndex(x => new { x.TableId, x.ColumnCode }).IsUnique();
+            e.HasIndex(x => new { x.TableId, x.ColumnName }).IsUnique();
 
             e.HasOne(x => x.Table)
                 .WithMany(x => x.Columns)

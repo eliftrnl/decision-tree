@@ -40,7 +40,6 @@ public class TableColumnsController : ControllerBase
             .Select(x => new TableColumnDto(
                 x.Id,
                 x.TableId,
-                x.ColumnCode,
                 x.ColumnName,
                 x.ExcelHeaderName,
                 x.Description,
@@ -52,7 +51,6 @@ public class TableColumnsController : ControllerBase
                 x.MaxLength,
                 x.Precision,
                 x.Scale,
-                x.ColumnType,
                 x.ValidFrom,
                 x.ValidTo
             ))
@@ -77,7 +75,6 @@ public class TableColumnsController : ControllerBase
             .Select(x => new TableColumnDto(
                 x.Id,
                 x.TableId,
-                x.ColumnCode,
                 x.ColumnName,
                 x.ExcelHeaderName,
                 x.Description,
@@ -89,7 +86,6 @@ public class TableColumnsController : ControllerBase
                 x.MaxLength,
                 x.Precision,
                 x.Scale,
-                x.ColumnType,
                 x.ValidFrom,
                 x.ValidTo
             ))
@@ -121,17 +117,16 @@ public class TableColumnsController : ControllerBase
         if (!tableExists)
             return NotFound(new { message = "Table not found" });
 
-        // Check for duplicate ColumnCode within same Table
-        var codeExists = await _db.TableColumns
-            .AnyAsync(x => x.TableId == tableId && x.ColumnCode == request.ColumnCode, ct);
+        // Check for duplicate ColumnName within same Table
+        var nameExists = await _db.TableColumns
+            .AnyAsync(x => x.TableId == tableId && x.ColumnName == request.ColumnName, ct);
 
-        if (codeExists)
-            return BadRequest(new { message = $"Column code '{request.ColumnCode}' already exists in this table" });
+        if (nameExists)
+            return BadRequest(new { message = $"Column name '{request.ColumnName}' already exists in this table" });
 
         var column = new TableColumn
         {
             TableId = request.TableId,
-            ColumnCode = request.ColumnCode,
             ColumnName = request.ColumnName,
             ExcelHeaderName = request.ExcelHeaderName,
             Description = request.Description,
@@ -143,7 +138,6 @@ public class TableColumnsController : ControllerBase
             MaxLength = request.MaxLength,
             Precision = request.Precision,
             Scale = request.Scale,
-            ColumnType = request.ColumnType,
             ValidFrom = request.ValidFrom,
             ValidTo = request.ValidTo
         };
@@ -154,7 +148,6 @@ public class TableColumnsController : ControllerBase
         var dto = new TableColumnDto(
             column.Id,
             column.TableId,
-            column.ColumnCode,
             column.ColumnName,
             column.ExcelHeaderName,
             column.Description,
@@ -166,7 +159,6 @@ public class TableColumnsController : ControllerBase
             column.MaxLength,
             column.Precision,
             column.Scale,
-            column.ColumnType,
             column.ValidFrom,
             column.ValidTo
         );
@@ -192,14 +184,13 @@ public class TableColumnsController : ControllerBase
         if (column == null)
             return NotFound(new { message = "Column not found" });
 
-        // Check for duplicate ColumnCode (excluding current column)
-        var codeExists = await _db.TableColumns
-            .AnyAsync(x => x.TableId == tableId && x.ColumnCode == request.ColumnCode && x.Id != id, ct);
+        // Check for duplicate ColumnName (excluding current column)
+        var nameExists = await _db.TableColumns
+            .AnyAsync(x => x.TableId == tableId && x.ColumnName == request.ColumnName && x.Id != id, ct);
 
-        if (codeExists)
-            return BadRequest(new { message = $"Column code '{request.ColumnCode}' already exists in this table" });
+        if (nameExists)
+            return BadRequest(new { message = $"Column name '{request.ColumnName}' already exists in this table" });
 
-        column.ColumnCode = request.ColumnCode;
         column.ColumnName = request.ColumnName;
         column.ExcelHeaderName = request.ExcelHeaderName;
         column.Description = request.Description;
@@ -211,7 +202,6 @@ public class TableColumnsController : ControllerBase
         column.MaxLength = request.MaxLength;
         column.Precision = request.Precision;
         column.Scale = request.Scale;
-        column.ColumnType = request.ColumnType;
         column.ValidFrom = request.ValidFrom;
         column.ValidTo = request.ValidTo;
 

@@ -13,14 +13,9 @@ public sealed class TableColumn
     public DecisionTreeTable Table { get; set; } = null!;
 
     /// <summary>
-    /// Technical column name (e.g., MusteriNo) - used for JSON keys and DB mapping
+    /// Column name - used for JSON keys, DB mapping, and display
     /// </summary>
-    public string ColumnCode { get; set; } = null!;
-
-    /// <summary>
-    /// Display name shown in UI
-    /// </summary>
-    public string? ColumnName { get; set; }
+    public string ColumnName { get; set; } = null!;
 
     /// <summary>
     /// Excel header name (if different from ColumnCode)
@@ -50,11 +45,7 @@ public sealed class TableColumn
     public int? Scale { get; set; }
 
     /// <summary>
-    /// Optional DB-specific column type (e.g., "varchar(50)", "decimal(10,2)")
-    /// </summary>
-    public string? ColumnType { get; set; }
 
-    /// <summary>
     /// Validity period for temporal columns
     /// </summary>
     public DateTime? ValidFrom { get; set; }

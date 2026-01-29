@@ -287,7 +287,7 @@ public class DataEntryController : ControllerBase
             }
 
             var columnMetadata = columns.Select(c => new ColumnMetadata(
-                c.ColumnCode,
+                c.ColumnName,
                 c.ColumnName,
                 c.DataType.ToString(),
                 c.IsRequired,
@@ -295,7 +295,7 @@ public class DataEntryController : ControllerBase
             )).ToList();
 
             tableOutputs.Add(new TableJsonOutput(
-                table.TableCode,
+                table.TableName,
                 table.TableName,
                 table.Direction.ToString(),
                 columnMetadata,
@@ -359,11 +359,11 @@ public class DataEntryController : ControllerBase
             var table = await _db.DecisionTreeTables
                 .FirstOrDefaultAsync(t => 
                     t.DecisionTreeId == dtId && 
-                    t.TableCode == tableJson.TableCode, ct);
+                    t.TableName == tableJson.TableName, ct);
 
             if (table is null)
             {
-                _logger.LogWarning("Table {TableCode} not found, skipping", tableJson.TableCode);
+                _logger.LogWarning("Table {TableName} not found, skipping", tableJson.TableName);
                 continue;
             }
 

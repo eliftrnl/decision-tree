@@ -36,7 +36,6 @@ public class DecisionTreeTablesController : ControllerBase
             .Select(x => new DecisionTreeTableDto(
                 x.Id,
                 x.DecisionTreeId,
-                x.TableCode,
                 x.TableName,
                 x.Direction.ToString(),
                 x.StatusCode.ToString()
@@ -61,7 +60,6 @@ public class DecisionTreeTablesController : ControllerBase
             .Select(x => new DecisionTreeTableDto(
                 x.Id,
                 x.DecisionTreeId,
-                x.TableCode,
                 x.TableName,
                 x.Direction.ToString(),
                 x.StatusCode.ToString()
@@ -91,17 +89,16 @@ public class DecisionTreeTablesController : ControllerBase
         if (!dtExists)
             return NotFound(new { message = "Decision tree not found" });
 
-        // Check for duplicate TableCode within same DecisionTree
+        // Check for duplicate TableName within same DecisionTree
         var codeExists = await _db.DecisionTreeTables
-            .AnyAsync(x => x.DecisionTreeId == dtId && x.TableCode == request.TableCode, ct);
+            .AnyAsync(x => x.DecisionTreeId == dtId && x.TableName == request.TableName, ct);
 
         if (codeExists)
-            return BadRequest(new { message = $"Table code '{request.TableCode}' already exists" });
+            return BadRequest(new { message = $"Table name '{request.TableName}' already exists" });
 
         var table = new DecisionTreeTable
         {
             DecisionTreeId = request.DecisionTreeId,
-            TableCode = request.TableCode,
             TableName = request.TableName,
             Direction = Enum.Parse<TableDirection>(request.Direction),
             StatusCode = (StatusCode)request.StatusCode
@@ -113,7 +110,6 @@ public class DecisionTreeTablesController : ControllerBase
         var dto = new DecisionTreeTableDto(
             table.Id,
             table.DecisionTreeId,
-            table.TableCode,
             table.TableName,
             table.Direction.ToString(),
             table.StatusCode.ToString()
@@ -139,14 +135,14 @@ public class DecisionTreeTablesController : ControllerBase
         if (table == null)
             return NotFound(new { message = "Table not found" });
 
-        // Check for duplicate TableCode (excluding current table)
+        // Check for duplicate TableName (excluding current table)
         var codeExists = await _db.DecisionTreeTables
-            .AnyAsync(x => x.DecisionTreeId == dtId && x.TableCode == request.TableCode && x.Id != id, ct);
+            .AnyAsync(x => x.DecisionTreeId == dtId && x.TableName == request.TableName && x.Id != id, ct);
 
         if (codeExists)
-            return BadRequest(new { message = $"Table code '{request.TableCode}' already exists" });
+            return BadRequest(new { message = $"Table name '{request.TableName}' already exists" });
 
-        table.TableCode = request.TableCode;
+        table.TableName = request.TableName;
         table.TableName = request.TableName;
         table.Direction = Enum.Parse<TableDirection>(request.Direction);
         table.StatusCode = (StatusCode)request.StatusCode;
