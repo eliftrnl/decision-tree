@@ -138,7 +138,7 @@ frontend/src/app/
 
 ## 👤 Geliştirici
 
-Elif Turanlı (@eliftrni)
+Elif Turanlı (@eliftrnl)
 
 ## 📅 Tarih
 
