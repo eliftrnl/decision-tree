@@ -1,9 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using DecisionTree.Api.Data;
+using DecisionTree.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+
+// Register services
+builder.Services.AddScoped<ExcelService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

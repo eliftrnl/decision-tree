@@ -3,6 +3,7 @@ using DecisionTree.Api.Data;
 using DecisionTree.Api.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using EntityStatusCode = DecisionTree.Api.Entities.StatusCode;
 
 namespace DecisionTree.Api.Controllers;
 
@@ -132,7 +133,7 @@ public class TableColumnsController : ControllerBase
             Description = request.Description,
             DataType = (ColumnDataType)request.DataType,
             IsRequired = request.IsRequired,
-            StatusCode = (StatusCode)request.StatusCode,
+            StatusCode = request.StatusCode == 0 ? EntityStatusCode.Active : (EntityStatusCode)request.StatusCode,
             OrderIndex = request.OrderIndex,
             Format = request.Format,
             MaxLength = request.MaxLength,

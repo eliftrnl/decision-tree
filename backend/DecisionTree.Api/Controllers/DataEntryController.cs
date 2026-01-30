@@ -1,9 +1,11 @@
 using DecisionTree.Api.Contracts.DataEntry;
 using DecisionTree.Api.Data;
 using DecisionTree.Api.Entities;
+using DecisionTree.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using EntityStatusCode = DecisionTree.Api.Entities.StatusCode;
 
 namespace DecisionTree.Api.Controllers;
 
@@ -13,11 +15,16 @@ public class DataEntryController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly ILogger<DataEntryController> _logger;
+    private readonly ExcelService _excelService;
 
-    public DataEntryController(AppDbContext db, ILogger<DataEntryController> logger)
+    public DataEntryController(
+        AppDbContext db, 
+        ILogger<DataEntryController> logger,
+        ExcelService excelService)
     {
         _db = db;
         _logger = logger;
+        _excelService = excelService;
     }
 
     /// <summary>
@@ -399,5 +406,203 @@ public class DataEntryController : ControllerBase
             importedRowsCount,
             tablesProcessed = jsonData.Tables.Count
         });
+    }
+
+    /// <summary>
+    /// Import data from Excel file
+    /// POST /api/decision-trees/{dtId}/data/import-excel
+    /// </summary>
+    [HttpPost("import-excel")]
+    [RequestSizeLimit(50 * 1024 * 1024)] // 50MB limit
+    public async Task<ActionResult<object>> ImportExcel(
+        int dtId,
+        IFormFile file,
+        [FromQuery] bool replaceExisting = false,
+        CancellationToken ct = default)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest(new { message = "No file uploaded" });
+        }
+
+        if (!file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest(new { message = "Only .xlsx files are supported" });
+        }
+
+        // Verify decision tree exists
+        var decisionTree = await _db.DecisionTrees
+            .FirstOrDefaultAsync(dt => dt.Id == dtId, ct);
+
+        if (decisionTree is null)
+        {
+            return NotFound(new { message = "Decision tree not found" });
+        }
+
+        // Get tables with columns
+        var tables = await _db.DecisionTreeTables
+            .Include(t => t.Columns.Where(c => c.StatusCode == EntityStatusCode.Active))
+            .Where(t => t.DecisionTreeId == dtId && t.StatusCode == EntityStatusCode.Active)
+            .ToListAsync(ct);
+
+        if (tables.Count == 0)
+        {
+            return BadRequest(new { message = "No active tables found for this decision tree" });
+        }
+
+        // Read Excel file
+        ExcelReadResult excelResult;
+        
+        using (var stream = file.OpenReadStream())
+        {
+            excelResult = await _excelService.ReadExcelAsync(stream, tables, ct);
+        }
+
+        if (!excelResult.Success)
+        {
+            return BadRequest(new
+            {
+                message = "Failed to read Excel file",
+                errors = excelResult.Errors
+            });
+        }
+
+        // Import data into database
+        var importedRowsCount = 0;
+
+        foreach (var (tableName, tableData) in excelResult.TableData)
+        {
+            var table = tables.FirstOrDefault(t => t.TableName == tableName);
+            if (table == null) continue;
+
+            // Optionally clear existing data
+            if (replaceExisting)
+            {
+                var existingRows = _db.DecisionTreeData.Where(d => d.TableId == table.Id);
+                _db.DecisionTreeData.RemoveRange(existingRows);
+            }
+
+            // Insert rows
+            foreach (var rowDict in tableData.Rows)
+            {
+                var rowJson = JsonSerializer.Serialize(rowDict);
+                var dataRow = new DecisionTreeData
+                {
+                    TableId = table.Id,
+                    RowDataJson = rowJson,
+                    CreatedAtUtc = DateTime.UtcNow,
+                    UpdatedAtUtc = DateTime.UtcNow
+                };
+
+                _db.DecisionTreeData.Add(dataRow);
+                importedRowsCount++;
+            }
+        }
+
+        await _db.SaveChangesAsync(ct);
+
+        return Ok(new
+        {
+            message = "Excel imported successfully",
+            importedRowsCount,
+            tablesProcessed = excelResult.TableData.Count,
+            warnings = excelResult.Warnings,
+            errors = excelResult.Errors.Concat(
+                excelResult.TableData.SelectMany(td => td.Value.Errors)
+            ).ToList()
+        });
+    }
+
+    /// <summary>
+    /// Export data to Excel file
+    /// GET /api/decision-trees/{dtId}/data/export-excel
+    /// </summary>
+    [HttpGet("export-excel")]
+    public async Task<IActionResult> ExportExcel(
+        int dtId,
+        [FromQuery] bool includeInactiveTables = false,
+        [FromQuery] bool includeInactiveColumns = false,
+        CancellationToken ct = default)
+    {
+        // Verify decision tree exists
+        var decisionTree = await _db.DecisionTrees
+            .FirstOrDefaultAsync(dt => dt.Id == dtId, ct);
+
+        if (decisionTree is null)
+        {
+            return NotFound(new { message = "Decision tree not found" });
+        }
+
+        // Get tables with columns
+        var tablesQuery = _db.DecisionTreeTables
+            .Include(t => t.Columns)
+            .Where(t => t.DecisionTreeId == dtId);
+
+        if (!includeInactiveTables)
+        {
+            tablesQuery = tablesQuery.Where(t => t.StatusCode == EntityStatusCode.Active);
+        }
+
+        var tables = await tablesQuery.ToListAsync(ct);
+
+        if (tables.Count == 0)
+        {
+            return BadRequest(new { message = "No tables found for this decision tree" });
+        }
+
+        // Prepare table data
+        var tableData = new Dictionary<string, TableDataResult>();
+
+        foreach (var table in tables)
+        {
+            // Filter columns
+            var columns = table.Columns
+                .Where(c => includeInactiveColumns || c.StatusCode == EntityStatusCode.Active)
+                .OrderBy(c => c.OrderIndex)
+                .ThenBy(c => c.Id)
+                .ToList();
+
+            if (columns.Count == 0)
+                continue;
+
+            // Get data rows
+            var dataRows = await _db.DecisionTreeData
+                .Where(d => d.TableId == table.Id)
+                .Select(d => d.RowDataJson)
+                .ToListAsync(ct);
+
+            if (dataRows.Count == 0)
+                continue; // Skip tables with no data
+
+            // Parse JSON rows
+            var parsedRows = new List<Dictionary<string, object?>>();
+            foreach (var rowJson in dataRows)
+            {
+                try
+                {
+                    var dict = JsonSerializer.Deserialize<Dictionary<string, object?>>(rowJson);
+                    if (dict is not null)
+                        parsedRows.Add(dict);
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogWarning(ex, "Failed to parse row JSON for table {TableId}", table.Id);
+                }
+            }
+
+            tableData[table.TableName] = new TableDataResult { Rows = parsedRows };
+        }
+
+        if (tableData.Count == 0)
+        {
+            return BadRequest(new { message = "No data found to export" });
+        }
+
+        // Generate Excel file
+        var excelBytes = await _excelService.WriteExcelAsync(tableData, tables, ct);
+
+        var fileName = $"{decisionTree.Code}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.xlsx";
+
+        return File(excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
     }
 }
