@@ -108,6 +108,9 @@
           </td>
           <td>{{ tree.updatedAtUtc ? (tree.updatedAtUtc | date:'dd.MM.yyyy HH:mm') : '-' }}</td>
           <td class="action-buttons">
+            <button class="btn btn-sm btn-primary" (click)="navigateToTables(tree.id); $event.stopPropagation()" title="Tabloları yönet">
+              📋 Tablolar
+            </button>
             <button class="btn btn-sm btn-info" (click)="openUpdateModal(tree); $event.stopPropagation()">
               Düzenle
             </button>

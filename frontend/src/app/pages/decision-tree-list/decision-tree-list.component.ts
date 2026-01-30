@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { DecisionTreeService, DecisionTree, DecisionTreeFilter } from '../../services/decision-tree.service';
 
 @Component({
@@ -12,6 +13,7 @@ import { DecisionTreeService, DecisionTree, DecisionTreeFilter } from '../../ser
 })
 export class DecisionTreeListComponent {
   private readonly service = inject(DecisionTreeService);
+  private readonly router = inject(Router);
 
   // Signals
   trees = signal<DecisionTree[]>([]);
@@ -166,5 +168,12 @@ export class DecisionTreeListComponent {
   selectTree(tree: DecisionTree): void {
     // TODO: Navigate to detail view or load tables/data
     console.log('Selected tree:', tree);
+  }
+
+  navigateToTables(treeId: number): void {
+    const tree = this.trees().find(t => t.id === treeId);
+    this.router.navigate(['/decision-trees', treeId, 'tables'], {
+      queryParams: { code: tree?.code || `DT-${treeId}` }
+    });
   }
 }
