@@ -10,7 +10,7 @@ using DtStatusCode = DecisionTree.Api.Entities.StatusCode;
 namespace DecisionTree.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/decision-trees")]
 public class DecisionTreesController : ControllerBase
 {
     private readonly AppDbContext _db;
@@ -92,46 +92,6 @@ public class DecisionTreesController : ControllerBase
             .FirstOrDefaultAsync(x => x.Id == id, ct);
 
         return item is null ? NotFound() : Ok(item);
-    }
-
-    // GET /api/DecisionTrees/5/tables
-    [HttpGet("{dtId:int}/tables")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<DecisionTreeTable>>> GetTables([FromRoute] int dtId, CancellationToken ct)
-    {
-        var tables = await _db.Set<DecisionTreeTable>()
-            .AsNoTracking()
-            .Where(t => t.DecisionTreeId == dtId)
-            .OrderBy(t => t.Id)
-            .ToListAsync(ct);
-
-        return Ok(tables);
-    }
-
-    // GET /api/DecisionTrees/5/tables/10/columns
-    [HttpGet("{dtId:int}/tables/{tableId:int}/columns")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<List<TableColumn>>> GetColumns(
-        [FromRoute] int dtId,
-        [FromRoute] int tableId,
-        CancellationToken ct)
-    {
-        var tableOk = await _db.Set<DecisionTreeTable>()
-            .AsNoTracking()
-            .AnyAsync(t => t.Id == tableId && t.DecisionTreeId == dtId, ct);
-
-        if (!tableOk)
-            return NotFound("Table not found for this DecisionTree.");
-
-        var cols = await _db.Set<TableColumn>()
-            .AsNoTracking()
-            .Where(c => c.TableId == tableId)
-            .OrderBy(c => c.OrderIndex)
-            .ThenBy(c => c.Id)
-            .ToListAsync(ct);
-
-        return Ok(cols);
     }
 
     // POST /api/DecisionTrees

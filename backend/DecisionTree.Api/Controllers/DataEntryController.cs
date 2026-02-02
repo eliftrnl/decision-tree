@@ -16,15 +16,21 @@ public class DataEntryController : ControllerBase
     private readonly AppDbContext _db;
     private readonly ILogger<DataEntryController> _logger;
     private readonly ExcelService _excelService;
+    private readonly JsonBuilderService _jsonBuilder;
+    private readonly ValidationService _validator;
 
     public DataEntryController(
         AppDbContext db, 
         ILogger<DataEntryController> logger,
-        ExcelService excelService)
+        ExcelService excelService,
+        JsonBuilderService jsonBuilder,
+        ValidationService validator)
     {
         _db = db;
         _logger = logger;
         _excelService = excelService;
+        _jsonBuilder = jsonBuilder;
+        _validator = validator;
     }
 
     /// <summary>
@@ -44,12 +50,12 @@ public class DataEntryController : ControllerBase
 
         var rows = await _db.DecisionTreeData
             .Where(d => d.TableId == tableId)
-            .OrderBy(d => d.Id)
+            .OrderBy(d => d.RowIndex)
             .Select(d => new DataRowDto(
                 d.Id,
                 d.TableId,
+                d.RowIndex,
                 d.RowDataJson,
-                d.RowCode,
                 d.CreatedAtUtc,
                 d.UpdatedAtUtc))
             .ToListAsync(ct);
@@ -72,8 +78,8 @@ public class DataEntryController : ControllerBase
             .Select(d => new DataRowDto(
                 d.Id,
                 d.TableId,
+                d.RowIndex,
                 d.RowDataJson,
-                d.RowCode,
                 d.CreatedAtUtc,
                 d.UpdatedAtUtc))
             .FirstOrDefaultAsync(ct);
@@ -120,9 +126,10 @@ public class DataEntryController : ControllerBase
 
         var entity = new DecisionTreeData
         {
+            DecisionTreeId = dtId,
             TableId = tableId,
+            RowIndex = request.RowIndex,
             RowDataJson = request.RowDataJson,
-            RowCode = request.RowCode,
             CreatedAtUtc = DateTime.UtcNow,
             UpdatedAtUtc = DateTime.UtcNow
         };
@@ -133,8 +140,8 @@ public class DataEntryController : ControllerBase
         var dto = new DataRowDto(
             entity.Id,
             entity.TableId,
+            entity.RowIndex,
             entity.RowDataJson,
-            entity.RowCode,
             entity.CreatedAtUtc,
             entity.UpdatedAtUtc);
 
@@ -179,7 +186,7 @@ public class DataEntryController : ControllerBase
         }
 
         row.RowDataJson = request.RowDataJson;
-        row.RowCode = request.RowCode;
+        row.RowIndex = request.RowIndex;
         // UpdatedAtUtc handled by SaveChanges override
 
         await _db.SaveChangesAsync(ct);
@@ -187,8 +194,8 @@ public class DataEntryController : ControllerBase
         var dto = new DataRowDto(
             row.Id,
             row.TableId,
+            row.RowIndex,
             row.RowDataJson,
-            row.RowCode,
             row.CreatedAtUtc,
             row.UpdatedAtUtc);
 
@@ -225,9 +232,69 @@ public class DataEntryController : ControllerBase
     }
 
     /// <summary>
-    /// Generate JSON output with metadata + data combined
+    /// Export JSON using JsonBuilderService (newer version)
+    /// Returns complete JSON with metadata and data
+    /// Automatically skips tables with no data
+    /// </summary>
+    [HttpGet("export-json")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<JsonExportResponse>> ExportJson(
+        int dtId,
+        [FromQuery] bool includeInactiveTables = false,
+        [FromQuery] bool includeInactiveColumns = false,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var export = await _jsonBuilder.BuildJsonExportAsync(
+                dtId,
+                includeInactiveTables,
+                includeInactiveColumns,
+                ct);
+
+            return Ok(export);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Export JSON as formatted string
+    /// GET /api/decision-trees/{dtId}/data/export-json-string
+    /// </summary>
+    [HttpGet("export-json-string")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ExportJsonString(
+        int dtId,
+        [FromQuery] bool includeInactiveTables = false,
+        [FromQuery] bool includeInactiveColumns = false,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var jsonString = await _jsonBuilder.BuildAndSerializeJsonAsync(
+                dtId,
+                includeInactiveTables,
+                includeInactiveColumns,
+                ct);
+
+            return Content(jsonString, "application/json");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Generate JSON output with metadata + data combined (legacy)
     /// </summary>
     [HttpPost("generate-json")]
+    [Obsolete("Use ExportJson instead")]
     public async Task<ActionResult<JsonOutputResponse>> GenerateJson(
         int dtId,
         [FromBody] GenerateJsonRequest? request,
@@ -604,5 +671,40 @@ public class DataEntryController : ControllerBase
         var fileName = $"{decisionTree.Code}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.xlsx";
 
         return File(excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+    }
+
+    /// <summary>
+    /// Validate a row against column metadata without saving
+    /// POST /api/decision-trees/{dtId}/data/validate-row
+    /// </summary>
+    [HttpPost("validate-row")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ValidateRowResponse>> ValidateRow(
+        int dtId,
+        [FromBody] ValidateRowRequest request,
+        CancellationToken ct = default)
+    {
+        // Verify table exists and belongs to decision tree
+        var table = await _db.DecisionTreeTables
+            .FirstOrDefaultAsync(t => t.Id == request.TableId && t.DecisionTreeId == dtId, ct);
+
+        if (table is null)
+            return NotFound(new { message = "Table not found in this decision tree" });
+
+        // Validate using ValidationService
+        var validationResult = await _validator.ValidateRowAsync(
+            request.TableId,
+            request.RowData,
+            0, // row index for error reporting
+            ct);
+
+        var response = new ValidateRowResponse(
+            IsValid: validationResult.IsValid,
+            Errors: validationResult.Errors,
+            Warnings: validationResult.Warnings
+        );
+
+        return Ok(response);
     }
 }

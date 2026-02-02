@@ -12,6 +12,8 @@ public sealed class AppDbContext : DbContext
     public DbSet<DecisionTreeTable> DecisionTreeTables => Set<DecisionTreeTable>();
     public DbSet<TableColumn> TableColumns => Set<TableColumn>();
     public DbSet<DecisionTreeData> DecisionTreeData => Set<DecisionTreeData>();
+    public DbSet<ValidationLog> ValidationLogs => Set<ValidationLog>();
+    public DbSet<ColumnValueMapping> ColumnValueMappings => Set<ColumnValueMapping>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -171,13 +173,13 @@ public sealed class AppDbContext : DbContext
 
             e.HasKey(x => x.Id);
 
+            e.Property(x => x.DecisionTreeId).IsRequired();
+            e.Property(x => x.TableId).IsRequired();
+            e.Property(x => x.RowIndex).IsRequired();
+
             e.Property(x => x.RowDataJson)
                 .HasColumnType("json")
                 .IsRequired();
-
-            e.Property(x => x.RowCode)
-                .HasMaxLength(100)
-                .IsRequired(false);
 
             e.Property(x => x.CreatedAtUtc)
                 .HasColumnType("datetime(6)")
@@ -187,12 +189,64 @@ public sealed class AppDbContext : DbContext
             e.Property(x => x.UpdatedAtUtc)
                 .HasColumnType("datetime(6)");
 
+            e.HasOne(x => x.DecisionTree)
+                .WithMany()
+                .HasForeignKey(x => x.DecisionTreeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             e.HasOne(x => x.Table)
                 .WithMany()
                 .HasForeignKey(x => x.TableId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             e.HasIndex(x => x.TableId);
+        });
+
+        // === ValidationLog ===
+        modelBuilder.Entity<ValidationLog>(e =>
+        {
+            e.ToTable("validation_log");
+
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.DecisionTreeId).IsRequired();
+            e.Property(x => x.ColumnName).HasMaxLength(200).IsRequired();
+            e.Property(x => x.ErrorType).IsRequired();
+            e.Property(x => x.ErrorMessage).HasMaxLength(500).IsRequired();
+            e.Property(x => x.LoggedAtUtc).HasColumnType("datetime(6)").ValueGeneratedOnAdd();
+
+            e.HasOne(x => x.DecisionTree)
+                .WithMany()
+                .HasForeignKey(x => x.DecisionTreeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(x => x.Table)
+                .WithMany()
+                .HasForeignKey(x => x.TableId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired(false);
+
+            e.HasIndex(x => x.DecisionTreeId);
+        });
+
+        // === ColumnValueMapping ===
+        modelBuilder.Entity<ColumnValueMapping>(e =>
+        {
+            e.ToTable("column_value_mapping");
+
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.TableColumnId).IsRequired();
+            e.Property(x => x.OldPosition).IsRequired();
+            e.Property(x => x.NewPosition).IsRequired();
+            e.Property(x => x.ChangedAtUtc).HasColumnType("datetime(6)").ValueGeneratedOnAdd();
+
+            e.HasOne(x => x.TableColumn)
+                .WithMany()
+                .HasForeignKey(x => x.TableColumnId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(x => x.TableColumnId);
         });
     }
 

@@ -6,8 +6,8 @@ export interface DecisionTreeTable {
   id: number;
   decisionTreeId: number;
   tableName: string;
-  direction: number; // 1=Input, 2=Output
-  statusCode: number; // 1=Active, 2=Passive
+  direction: string | number; // "Input"/"Output" or 1=Input, 2=Output
+  statusCode: string | number; // "Active"/"Passive" or 1=Active, 2=Passive
   createdAtUtc?: string;
   updatedAtUtc?: string;
 }

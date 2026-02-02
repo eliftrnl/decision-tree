@@ -1,0 +1,220 @@
+### Backend Test Komutları
+
+@baseUrl = http://localhost:5135/api
+@dtId = 1
+@tableId = 8
+
+### 1️⃣ DECISION TREES
+
+### Tüm Decision Tree'leri Listele
+GET {{baseUrl}}/decision-trees
+
+### Decision Tree ID'ye göre al
+GET {{baseUrl}}/decision-trees/{{dtId}}
+
+### Decision Tree'nin kod'u ile sorgula
+GET {{baseUrl}}/decision-trees/exists?code=DT-TEST-001
+
+### Yeni Decision Tree oluştur
+POST {{baseUrl}}/decision-trees
+Content-Type: application/json
+
+{
+  "code": "DT-TEST-NEW",
+  "name": "Yeni Test Karar Ağacı"
+}
+
+### Decision Tree'yi güncelle
+PUT {{baseUrl}}/decision-trees/{{dtId}}
+Content-Type: application/json
+
+{
+  "name": "Güncellenmiş İsim",
+  "statusCode": 1
+}
+
+---
+
+### 2️⃣ TABLES
+
+### Tabloları Listele
+GET {{baseUrl}}/decision-trees/{{dtId}}/tables
+
+### Belirli Tabloyu al
+GET {{baseUrl}}/decision-trees/{{dtId}}/tables/{{tableId}}
+
+### Yeni Tablo oluştur
+POST {{baseUrl}}/decision-trees/{{dtId}}/tables
+Content-Type: application/json
+
+{
+  "decisionTreeId": {{dtId}},
+  "tableName": "NEW_TABLE_TEST",
+  "direction": "Input",
+  "statusCode": 1
+}
+
+### Tabloyu güncelle
+PUT {{baseUrl}}/decision-trees/{{dtId}}/tables/{{tableId}}
+Content-Type: application/json
+
+{
+  "tableName": "SAMPLE_CUSTOMERS_UPDATED",
+  "direction": "Output",
+  "statusCode": 1
+}
+
+### Tabloyu sil
+DELETE {{baseUrl}}/decision-trees/{{dtId}}/tables/{{tableId}}
+
+---
+
+### 3️⃣ COLUMNS
+
+### Kolonları Listele
+GET {{baseUrl}}/decision-trees/{{dtId}}/tables/{{tableId}}/columns
+
+### Belirli Kolonu al
+GET {{baseUrl}}/decision-trees/{{dtId}}/tables/{{tableId}}/columns/19
+
+### Yeni Kolon Oluştur
+POST {{baseUrl}}/decision-trees/{{dtId}}/tables/{{tableId}}/columns
+Content-Type: application/json
+
+{
+  "tableId": {{tableId}},
+  "columnName": "IsActive",
+  "dataType": 5,
+  "isRequired": false,
+  "statusCode": 1,
+  "orderIndex": 5
+}
+
+### Kolonu Güncelle
+PUT {{baseUrl}}/decision-trees/{{dtId}}/tables/{{tableId}}/columns/19
+Content-Type: application/json
+
+{
+  "columnName": "CustomerNo",
+  "dataType": 1,
+  "isRequired": true,
+  "statusCode": 1,
+  "orderIndex": 1,
+  "maxLength": 25
+}
+
+### Kolon Sırasını Değiştir (Reorder)
+PUT {{baseUrl}}/decision-trees/{{dtId}}/tables/{{tableId}}/columns/reorder
+Content-Type: application/json
+
+{
+  "columns": [
+    {"columnId": 19, "newOrderIndex": 10},
+    {"columnId": 20, "newOrderIndex": 5},
+    {"columnId": 21, "newOrderIndex": 15}
+  ]
+}
+
+### Kolonu Sil
+DELETE {{baseUrl}}/decision-trees/{{dtId}}/tables/{{tableId}}/columns/19
+
+---
+
+### 4️⃣ DATA ROWS
+
+### Satırları Listele
+GET {{baseUrl}}/decision-trees/{{dtId}}/data/tables/{{tableId}}/rows
+
+### Belirli Satırı al
+GET {{baseUrl}}/decision-trees/{{dtId}}/data/tables/{{tableId}}/rows/14
+
+### Yeni Satır Ekle
+POST {{baseUrl}}/decision-trees/{{dtId}}/data/tables/{{tableId}}/rows
+Content-Type: application/json
+
+{
+  "tableId": {{tableId}},
+  "rowIndex": 5,
+  "rowDataJson": "{\"CustomerNo\": \"C005\", \"CustomerName\": \"Yeni Müşteri\", \"Revenue\": 50000.00, \"RegistrationDate\": \"2024-02-01\"}"
+}
+
+### Satırı Güncelle
+PUT {{baseUrl}}/decision-trees/{{dtId}}/data/tables/{{tableId}}/rows/14
+Content-Type: application/json
+
+{
+  "rowIndex": 1,
+  "rowDataJson": "{\"CustomerNo\": \"C001-UPD\", \"CustomerName\": \"Ahmet Yılmaz Güncellendi\", \"Revenue\": 16000.50, \"RegistrationDate\": \"2024-01-15\"}"
+}
+
+### Satırı Sil
+DELETE {{baseUrl}}/decision-trees/{{dtId}}/data/tables/{{tableId}}/rows/14
+
+---
+
+### 5️⃣ JSON & EXCEL
+
+### JSON Export (Metadata + Data)
+GET {{baseUrl}}/decision-trees/{{dtId}}/data/export-json
+
+### JSON Export (String format)
+GET {{baseUrl}}/decision-trees/{{dtId}}/data/export-json-string
+
+### Excel Export (Dosya İndir)
+GET {{baseUrl}}/decision-trees/{{dtId}}/data/export-excel
+
+### JSON'u Parse Et (Import)
+POST {{baseUrl}}/decision-trees/{{dtId}}/data/parse-json
+Content-Type: application/json
+
+{
+  "decisionTreeId": {{dtId}},
+  "jsonContent": "{\"metadata\": {\"decisionTreeId\": {{dtId}}, \"decisionTreeCode\": \"DT-TEST-001\", \"schemaVersion\": 1}, \"tables\": [{\"tableName\": \"SAMPLE_CUSTOMERS\", \"direction\": \"Input\", \"columns\": [], \"rows\": [{\"CustomerNo\": \"C006\", \"CustomerName\": \"JSON Import Test\", \"Revenue\": 12345.67}]}]}",
+  "replaceExistingData": false
+}
+
+---
+
+### 6️⃣ VALIDATION
+
+### Satır Validasyonu (Save etmeden kontrol)
+POST {{baseUrl}}/decision-trees/{{dtId}}/data/validate-row
+Content-Type: application/json
+
+{
+  "tableId": {{tableId}},
+  "rowData": {
+    "CustomerNo": "C999",
+    "CustomerName": "Validation Test",
+    "Revenue": 99999.99,
+    "RegistrationDate": "2024-02-02"
+  }
+}
+
+### Geçersiz Veri ile Validasyon
+POST {{baseUrl}}/decision-trees/{{dtId}}/data/validate-row
+Content-Type: application/json
+
+{
+  "tableId": {{tableId}},
+  "rowData": {
+    "CustomerName": "Hata Testi",
+    "Revenue": "geçersiz sayı"
+  }
+}
+
+---
+
+### 7️⃣ FILTER & SEARCH
+
+### Decision Tree'leri Koda Göre Filtrele
+GET {{baseUrl}}/decision-trees?code=DT-TEST-001
+
+### Decision Tree'leri Adına Göre Filtrele
+GET {{baseUrl}}/decision-trees?name=Test
+
+### Decision Tree'leri Statüye Göre Filtrele
+GET {{baseUrl}}/decision-trees?status=1
+
+### Kombinli Filter
+GET {{baseUrl}}/decision-trees?code=DT-TEST&name=Karar&status=1

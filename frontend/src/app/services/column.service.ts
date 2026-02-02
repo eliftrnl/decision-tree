@@ -8,9 +8,9 @@ export interface TableColumn {
   columnName: string;
   excelHeaderName?: string;
   description?: string;
-  dataType: number; // 1=String, 2=Int, 3=Decimal, 4=Date, 5=Boolean
+  dataType: number | string; // 1=String, 2=Int, 3=Decimal, 4=Date, 5=Boolean
   isRequired: boolean;
-  statusCode: number; // 1=Active, 2=Passive
+  statusCode: number | string; // 1=Active, 2=Passive
   orderIndex: number;
   format?: string;
   maxLength?: number;

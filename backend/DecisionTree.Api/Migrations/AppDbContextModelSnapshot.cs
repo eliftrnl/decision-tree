@@ -22,6 +22,36 @@ namespace DecisionTree.Api.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("DecisionTree.Api.Entities.ColumnValueMapping", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("ChangedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime(6)");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<DateTime>("ChangedAtUtc"));
+
+                    b.Property<int>("NewPosition")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OldPosition")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TableColumnId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TableColumnId");
+
+                    b.ToTable("column_value_mapping", (string)null);
+                });
+
             modelBuilder.Entity("DecisionTree.Api.Entities.DecisionTree", b =>
                 {
                     b.Property<int>("Id")
@@ -79,13 +109,15 @@ namespace DecisionTree.Api.Migrations
                         .HasColumnType("datetime(6)")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
 
-                    b.Property<string>("RowCode")
-                        .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
+                    b.Property<int>("DecisionTreeId")
+                        .HasColumnType("int");
 
                     b.Property<string>("RowDataJson")
                         .IsRequired()
                         .HasColumnType("json");
+
+                    b.Property<int>("RowIndex")
+                        .HasColumnType("int");
 
                     b.Property<int>("TableId")
                         .HasColumnType("int");
@@ -94,6 +126,8 @@ namespace DecisionTree.Api.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DecisionTreeId");
 
                     b.HasIndex("TableId");
 
@@ -199,13 +233,80 @@ namespace DecisionTree.Api.Migrations
                     b.ToTable("decision_tree_column", (string)null);
                 });
 
+            modelBuilder.Entity("DecisionTree.Api.Entities.ValidationLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ColumnName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<int>("DecisionTreeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ErrorMessage")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<int>("ErrorType")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("LoggedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime(6)");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<DateTime>("LoggedAtUtc"));
+
+                    b.Property<int?>("RowIndex")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("TableId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DecisionTreeId");
+
+                    b.HasIndex("TableId");
+
+                    b.ToTable("validation_log", (string)null);
+                });
+
+            modelBuilder.Entity("DecisionTree.Api.Entities.ColumnValueMapping", b =>
+                {
+                    b.HasOne("DecisionTree.Api.Entities.TableColumn", "TableColumn")
+                        .WithMany()
+                        .HasForeignKey("TableColumnId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TableColumn");
+                });
+
             modelBuilder.Entity("DecisionTree.Api.Entities.DecisionTreeData", b =>
                 {
+                    b.HasOne("DecisionTree.Api.Entities.DecisionTree", "DecisionTree")
+                        .WithMany()
+                        .HasForeignKey("DecisionTreeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("DecisionTree.Api.Entities.DecisionTreeTable", "Table")
                         .WithMany()
                         .HasForeignKey("TableId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("DecisionTree");
 
                     b.Navigation("Table");
                 });
@@ -228,6 +329,24 @@ namespace DecisionTree.Api.Migrations
                         .HasForeignKey("TableId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Table");
+                });
+
+            modelBuilder.Entity("DecisionTree.Api.Entities.ValidationLog", b =>
+                {
+                    b.HasOne("DecisionTree.Api.Entities.DecisionTree", "DecisionTree")
+                        .WithMany()
+                        .HasForeignKey("DecisionTreeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DecisionTree.Api.Entities.DecisionTreeTable", "Table")
+                        .WithMany()
+                        .HasForeignKey("TableId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("DecisionTree");
 
                     b.Navigation("Table");
                 });

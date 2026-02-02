@@ -8,6 +8,8 @@ builder.Services.AddControllers();
 
 // Register services
 builder.Services.AddScoped<ExcelService>();
+builder.Services.AddScoped<JsonBuilderService>();
+builder.Services.AddScoped<ValidationService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

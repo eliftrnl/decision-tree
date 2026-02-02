@@ -1,3 +1,4 @@
+using DecisionTree.Api.Contracts.DataEntry;
 using DecisionTree.Api.Contracts.DecisionTrees;
 using DecisionTree.Api.Data;
 using DecisionTree.Api.Entities;
@@ -241,7 +242,7 @@ public class TableColumnsController : ControllerBase
     public async Task<IActionResult> Reorder(
         int dtId,
         int tableId,
-        [FromBody] ReorderColumnsRequest request,
+        [FromBody] DecisionTree.Api.Contracts.DataEntry.ReorderColumnsRequest request,
         CancellationToken ct)
     {
         var tableExists = await _db.DecisionTreeTables
@@ -251,20 +252,72 @@ public class TableColumnsController : ControllerBase
             return NotFound(new { message = "Table not found" });
 
         var columns = await _db.TableColumns
-            .Where(x => x.TableId == tableId && request.ColumnIds.Contains(x.Id))
+            .Where(x => x.TableId == tableId && request.Columns.Select(c => c.ColumnId).Contains(x.Id))
             .ToListAsync(ct);
 
-        if (columns.Count != request.ColumnIds.Count)
+        if (columns.Count != request.Columns.Count)
             return BadRequest(new { message = "Some column IDs are invalid" });
 
-        for (int i = 0; i < request.ColumnIds.Count; i++)
+        foreach (var orderItem in request.Columns)
         {
-            var column = columns.First(c => c.Id == request.ColumnIds[i]);
-            column.OrderIndex = i;
+            var column = columns.FirstOrDefault(c => c.Id == orderItem.ColumnId);
+            if (column is not null)
+            {
+                column.OrderIndex = orderItem.NewOrderIndex;
+            }
         }
 
         await _db.SaveChangesAsync(ct);
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Reorder columns for a table
+    /// PUT /api/decision-trees/{dtId}/tables/{tableId}/columns/reorder
+    /// </summary>
+    [HttpPut("reorder")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<object>> ReorderColumns(
+        int dtId,
+        int tableId,
+        [FromBody] DecisionTree.Api.Contracts.DataEntry.ReorderColumnsRequest request,
+        CancellationToken ct = default)
+    {
+        // Verify table exists and belongs to decision tree
+        var table = await _db.DecisionTreeTables
+            .Include(t => t.Columns)
+            .FirstOrDefaultAsync(t => t.Id == tableId && t.DecisionTreeId == dtId, ct);
+
+        if (table is null)
+            return NotFound(new { message = "Table not found in this decision tree" });
+
+        // Validate all column IDs belong to this table
+        var columnIds = request.Columns.Select(c => c.ColumnId).ToList();
+        var dbColumnIds = table.Columns.Select(c => c.Id).ToList();
+
+        var invalidIds = columnIds.Except(dbColumnIds).ToList();
+        if (invalidIds.Count > 0)
+            return BadRequest(new { message = $"Invalid column IDs: {string.Join(", ", invalidIds)}" });
+
+        // Update order indices
+        foreach (var orderItem in request.Columns)
+        {
+            var column = table.Columns.FirstOrDefault(c => c.Id == orderItem.ColumnId);
+            if (column is not null)
+            {
+                column.OrderIndex = orderItem.NewOrderIndex;
+            }
+        }
+
+        await _db.SaveChangesAsync(ct);
+
+        return Ok(new
+        {
+            message = "Columns reordered successfully",
+            updatedCount = request.Columns.Count
+        });
     }
 }

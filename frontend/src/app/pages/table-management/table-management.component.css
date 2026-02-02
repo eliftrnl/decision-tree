@@ -38,6 +38,9 @@
   padding: 1rem;
   border-radius: 6px;
   margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .alert-error {

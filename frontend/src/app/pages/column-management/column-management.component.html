@@ -1,0 +1,176 @@
+<div class="container">
+  <div class="header">
+    <div class="header-left">
+      <button class="btn btn-secondary" (click)="goBack()">← Tablolara Dön</button>
+      <h1>Kolon Yönetimi</h1>
+      <span class="subtitle">{{ tableName }}</span>
+    </div>
+    <button class="btn btn-success" (click)="openCreateModal()">
+      + Yeni Kolon
+    </button>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error() && !loading()" class="alert alert-error">
+    {{ error() }}
+    <button class="btn btn-sm" (click)="error.set(null)">✕</button>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading()" class="loading-state">
+    <div class="spinner"></div>
+    <p>Yükleniyor...</p>
+  </div>
+
+  <!-- Columns Table -->
+  <div *ngIf="!loading()" class="columns-section">
+    <div *ngIf="columns().length === 0" class="empty-state">
+      <p>Henüz kolon eklenmemiş</p>
+      <button class="btn btn-primary" (click)="openCreateModal()">İlk Kolonu Ekle</button>
+    </div>
+
+    <div *ngIf="columns().length > 0" class="table-wrapper">
+      <table class="columns-table">
+        <thead>
+          <tr>
+            <th>Sıra</th>
+            <th>Kolon Adı</th>
+            <th>Veri Tipi</th>
+            <th>Zorunlu</th>
+            <th>Format</th>
+            <th>Max Uzunluk</th>
+            <th>Durum</th>
+            <th>İşlemler</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let column of columns()">
+            <td>{{ column.orderIndex + 1 }}</td>
+            <td class="font-weight-bold">{{ column.columnName }}</td>
+            <td>{{ getDataTypeLabel(column.dataType) }}</td>
+            <td>
+              <span *ngIf="column.isRequired" class="badge badge-success">Evet</span>
+              <span *ngIf="!column.isRequired" class="badge badge-gray">Hayır</span>
+            </td>
+            <td>{{ column.format || '-' }}</td>
+            <td>{{ column.maxLength || '-' }}</td>
+            <td>
+              <span [class]="getStatusClass(column.statusCode)">
+                {{ getStatusLabel(column.statusCode) }}
+              </span>
+            </td>
+            <td class="action-buttons">
+              <button class="btn btn-sm btn-info" (click)="openUpdateModal(column)">✎ Düzenle</button>
+              <button class="btn btn-sm btn-danger" (click)="deleteColumn(column)">✕ Sil</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Navigation Button -->
+    <div class="footer-actions">
+      <button class="btn btn-primary" (click)="navigateToDataEntry()">
+        → Veri Giriş Ekranına Git
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal: Create/Edit Column -->
+  <div *ngIf="showModal()" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>{{ modalMode() === 'create' ? 'Yeni Kolon Ekle' : 'Kolonu Düzenle' }}</h2>
+        <button class="close-btn" (click)="closeModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Kolon Adı *</label>
+          <input
+            type="text"
+            [(ngModel)]="form.columnName"
+            placeholder="Örn: MusteriNo"
+            class="form-control"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Excel Başlığı (Opsiyonel)</label>
+          <input
+            type="text"
+            [(ngModel)]="form.excelHeaderName"
+            placeholder="Kolon adıyla aynı kullanılacak"
+            class="form-control"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Açıklama (Opsiyonel)</label>
+          <textarea
+            [(ngModel)]="form.description"
+            placeholder="Kolon hakkında açıklama"
+            class="form-control"
+            rows="2"
+          ></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Veri Tipi *</label>
+            <select [(ngModel)]="form.dataType" class="form-control">
+              <option *ngFor="let opt of dataTypeOptions" [value]="opt.value">
+                {{ opt.label }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Zorunlu</label>
+            <input
+              type="checkbox"
+              [(ngModel)]="form.isRequired"
+              class="form-checkbox"
+            />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Format (Opsiyonel)</label>
+            <input
+              type="text"
+              [(ngModel)]="form.format"
+              placeholder="Örn: dd.MM.yyyy"
+              class="form-control"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Max Uzunluk (Opsiyonel)</label>
+            <input
+              type="number"
+              [(ngModel)]="form.maxLength"
+              placeholder="Örn: 100"
+              class="form-control"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Durum</label>
+          <select [(ngModel)]="form.statusCode" class="form-control">
+            <option *ngFor="let opt of statusOptions" [value]="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeModal()">İptal</button>
+        <button class="btn btn-primary" (click)="saveColumn()">Kaydet</button>
+      </div>
+    </div>
+  </div>
+</div>

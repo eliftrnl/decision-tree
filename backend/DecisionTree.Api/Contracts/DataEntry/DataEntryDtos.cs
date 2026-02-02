@@ -6,8 +6,8 @@ namespace DecisionTree.Api.Contracts.DataEntry;
 public record DataRowDto(
     int Id,
     int TableId,
+    int RowIndex,
     string RowDataJson,
-    string? RowCode,
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc
 );
@@ -17,16 +17,16 @@ public record DataRowDto(
 /// </summary>
 public record DataRowCreateRequest(
     int TableId,
-    string RowDataJson,
-    string? RowCode = null
+    int RowIndex,
+    string RowDataJson
 );
 
 /// <summary>
 /// Request for updating an existing data row
 /// </summary>
 public record DataRowUpdateRequest(
-    string RowDataJson,
-    string? RowCode = null
+    int RowIndex,
+    string RowDataJson
 );
 
 /// <summary>

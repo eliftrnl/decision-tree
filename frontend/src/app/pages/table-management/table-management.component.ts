@@ -64,11 +64,15 @@ export class TableManagementComponent implements OnInit {
   }
 
   getInputTables(): DecisionTreeTable[] {
-    return this.tables().filter(t => t.direction === 1);
+    return this.tables().filter(t => 
+      t.direction === 1 || t.direction === 'Input'
+    );
   }
 
   getOutputTables(): DecisionTreeTable[] {
-    return this.tables().filter(t => t.direction === 2);
+    return this.tables().filter(t => 
+      t.direction === 2 || t.direction === 'Output'
+    );
   }
 
   openCreateModal(): void {
@@ -169,19 +173,19 @@ export class TableManagementComponent implements OnInit {
     this.router.navigate(['/']);
   }
 
-  getStatusText(statusCode: number): string {
-    return statusCode === 1 ? 'Aktif' : 'Pasif';
+  getStatusText(statusCode: number | string): string {
+    return statusCode === 1 || statusCode === 'Active' ? 'Aktif' : 'Pasif';
   }
 
-  getStatusClass(statusCode: number): string {
-    return statusCode === 1 ? 'status-active' : 'status-passive';
+  getStatusClass(statusCode: number | string): string {
+    return statusCode === 1 || statusCode === 'Active' ? 'status-active' : 'status-passive';
   }
 
-  getDirectionText(direction: number): string {
-    return direction === 1 ? 'Input' : 'Output';
+  getDirectionText(direction: number | string): string {
+    return direction === 1 || direction === 'Input' ? 'Input' : 'Output';
   }
 
-  getDirectionClass(direction: number): string {
-    return direction === 1 ? 'direction-input' : 'direction-output';
+  getDirectionClass(direction: number | string): string {
+    return direction === 1 || direction === 'Input' ? 'direction-input' : 'direction-output';
   }
 }

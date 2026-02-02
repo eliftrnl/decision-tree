@@ -7,7 +7,7 @@ export interface DecisionTree {
   code: string;
   name: string;
   statusCode: number;
-  updatedAtUtc?: string;
+  lastOperationDateUtc?: string;
 }
 
 export interface DecisionTreeFilter {
@@ -21,7 +21,7 @@ export interface DecisionTreeFilter {
 })
 export class DecisionTreeService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = 'http://localhost:5135/api/DecisionTrees';
+  private readonly apiUrl = 'http://localhost:5135/api/decision-trees';
 
   search(filter: DecisionTreeFilter): Observable<DecisionTree[]> {
     let params = new HttpParams();

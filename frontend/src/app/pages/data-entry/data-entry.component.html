@@ -1,0 +1,164 @@
+<div class="container">
+  <div class="header">
+    <button class="btn-back" (click)="goBack()">← Geri</button>
+    <h1>Veri Girişi</h1>
+    <div class="header-actions">
+      <button class="btn-secondary" (click)="exportJson()" [disabled]="dataRows().length === 0">📥 JSON Dışa Aktar</button>
+      <button class="btn-secondary" (click)="exportExcel()" [disabled]="dataRows().length === 0">📥 Excel Dışa Aktar</button>
+    </div>
+  </div>
+
+  <!-- Tablo Seçimi -->
+  <div class="tables-section" *ngIf="tables().length > 0">
+    <h2>Tabloyu Seç</h2>
+    <div class="table-selector">
+      <button 
+        *ngFor="let table of tables()"
+        [class.active]="selectedTable()?.id === table.id"
+        (click)="selectTable(table)"
+        class="btn-table"
+      >
+        {{ table.tableName }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Veri Tablosu -->
+  <div class="data-section" *ngIf="selectedTable()">
+    <div class="section-header">
+      <h2>{{ selectedTable()?.tableName }} - Veriler</h2>
+      <button class="btn-success" (click)="openAddModal()">+ Yeni Satır Ekle</button>
+    </div>
+
+    <div *ngIf="loading()" class="loading">Yükleniyor...</div>
+
+    <table *ngIf="!loading()" class="data-table">
+      <thead>
+        <tr>
+          <th>SIRa</th>
+          <th *ngFor="let col of columns()">{{ col.columnName }}</th>
+          <th>İŞLEMLER</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of dataRows(); let i = index">
+          <td>{{ i + 1 }}</td>
+          <td *ngFor="let col of columns()">
+            {{ getColumnValue(row, col.columnName) }}
+          </td>
+          <td class="actions">
+            <button class="btn-edit" (click)="openEditModal(row)">Düzenle</button>
+            <button class="btn-delete" (click)="deleteRow(row)">Sil</button>
+          </td>
+        </tr>
+        <tr *ngIf="dataRows().length === 0">
+          <td [colSpan]="columns().length + 2" class="empty">Veri yok</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Yeni Satır Modal -->
+  <div *ngIf="showAddModal()" class="modal-overlay" (click)="closeAddModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Yeni Satır Ekle</h2>
+        <button class="btn-close" (click)="closeAddModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div *ngIf="validationErrors().length > 0" class="error-box">
+          <div *ngFor="let err of validationErrors()">{{ err }}</div>
+        </div>
+
+        <div *ngFor="let col of columns()" class="form-group">
+          <label>{{ col.columnName }} {{ col.isRequired ? '*' : '(Opsiyonel)' }}</label>
+          <input 
+            *ngIf="col.dataType === 1 || col.dataType === 2"
+            type="text"
+            [value]="newRowData()[col.columnName] || ''"
+            (input)="updateFieldValue(col.columnName, $any($event.target).value)"
+            [required]="col.isRequired"
+          />
+          <input 
+            *ngIf="col.dataType === 3"
+            type="number"
+            [value]="newRowData()[col.columnName] || ''"
+            (input)="updateFieldValue(col.columnName, $any($event.target).value)"
+            [required]="col.isRequired"
+          />
+          <input 
+            *ngIf="col.dataType === 4"
+            type="date"
+            [value]="newRowData()[col.columnName] || ''"
+            (input)="updateFieldValue(col.columnName, $any($event.target).value)"
+            [required]="col.isRequired"
+          />
+          <input 
+            *ngIf="col.dataType === 5"
+            type="checkbox"
+            [checked]="newRowData()[col.columnName]"
+            (change)="updateFieldValue(col.columnName, $any($event.target).checked)"
+          />
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="closeAddModal()">İptal</button>
+        <button class="btn-success" (click)="saveRow()">Ekle</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Düzenle Modal -->
+  <div *ngIf="showEditModal()" class="modal-overlay" (click)="closeEditModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Satırı Düzenle</h2>
+        <button class="btn-close" (click)="closeEditModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div *ngIf="validationErrors().length > 0" class="error-box">
+          <div *ngFor="let err of validationErrors()">{{ err }}</div>
+        </div>
+
+        <div *ngFor="let col of columns()" class="form-group">
+          <label>{{ col.columnName }} {{ col.isRequired ? '*' : '(Opsiyonel)' }}</label>
+          <input 
+            *ngIf="col.dataType === 1 || col.dataType === 2"
+            type="text"
+            [value]="newRowData()[col.columnName] || ''"
+            (input)="updateFieldValue(col.columnName, $any($event.target).value)"
+            [required]="col.isRequired"
+          />
+          <input 
+            *ngIf="col.dataType === 3"
+            type="number"
+            [value]="newRowData()[col.columnName] || ''"
+            (input)="updateFieldValue(col.columnName, $any($event.target).value)"
+            [required]="col.isRequired"
+          />
+          <input 
+            *ngIf="col.dataType === 4"
+            type="date"
+            [value]="newRowData()[col.columnName] || ''"
+            (input)="updateFieldValue(col.columnName, $any($event.target).value)"
+            [required]="col.isRequired"
+          />
+          <input 
+            *ngIf="col.dataType === 5"
+            type="checkbox"
+            [checked]="newRowData()[col.columnName]"
+            (change)="updateFieldValue(col.columnName, $any($event.target).checked)"
+          />
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="closeEditModal()">İptal</button>
+        <button class="btn-success" (click)="saveRow()">Kaydet</button>
+      </div>
+    </div>
+  </div>
+</div>

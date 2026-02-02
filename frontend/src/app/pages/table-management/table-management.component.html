@@ -13,6 +13,7 @@
   <!-- Error State -->
   <div *ngIf="error() && !loading()" class="alert alert-error">
     {{ error() }}
+    <button class="btn btn-sm" (click)="error.set(null)">✕</button>
   </div>
 
   <!-- Loading State -->

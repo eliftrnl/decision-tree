@@ -1,12 +1,25 @@
 <div class="container">
   <div class="header">
-    <h1>Karar Ağaçları</h1>
+    <div>
+      <h1>Karar Ağaçları</h1>
+    </div>
     <button class="btn btn-success" (click)="openCreateModal()">
       + Yeni Karar Ağacı
     </button>
   </div>
 
-  <!-- Filtre Bölümü -->
+  <!-- Yükleniyor Durumu -->
+  <div *ngIf="loading()" class="state-message">
+    <div class="spinner"></div>
+    <p>Veriler yükleniyor...</p>
+  </div>
+
+  <!-- Hata Durumu -->
+  <div *ngIf="error() && !loading()" class="state-message">
+    <p style="color: #dc2626;">⚠️ {{ error() }}</p>
+  </div>
+
+  <!-- Filtre Bölümü - Her Zaman Görünür -->
   <div class="filter-section">
     <h2>Filtre</h2>
     <div class="filter-grid">
@@ -52,75 +65,47 @@
     </div>
   </div>
 
-  <!-- Sonuç Bölümü -->
-  <div class="results-section">
-    <!-- Loading State -->
-    <div *ngIf="loading()" class="state-message">
-      <div class="spinner"></div>
-      <p>Veriler yükleniyor...</p>
+  <!-- Sonuçlar -->
+  <div *ngIf="!loading()" class="results-section">
+    <div *ngIf="trees().length === 0 && hasSearched()" class="state-message">
+      <p>Arama kriterlerine uygun kayıt bulunamadı.</p>
     </div>
 
-    <!-- Error State -->
-    <div *ngIf="error() && !loading()" class="state-message error">
-      <p>{{ error() }}</p>
+    <div *ngIf="trees().length > 0">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Kod</th>
+            <th>Ad</th>
+            <th>Durum</th>
+            <th>Oluşturma Tarihi</th>
+            <th>İşlemler</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let tree of trees()">
+            <td><strong>{{ tree.code }}</strong></td>
+            <td>{{ tree.name }}</td>
+            <td>
+              <span *ngIf="tree.statusCode === 1" class="status-active">✓ Aktif</span>
+              <span *ngIf="tree.statusCode === 2" class="status-passive">✗ Pasif</span>
+            </td>
+            <td>{{ tree.lastOperationDateUtc | date: 'dd.MM.yyyy' }}</td>
+            <td>
+              <button class="btn btn-sm btn-info" (click)="navigateToTables(tree.id)">
+                Tablolar
+              </button>
+              <button class="btn btn-sm btn-warning" (click)="openUpdateModal(tree)">
+                Düzenle
+              </button>
+              <button class="btn btn-sm btn-danger" (click)="deleteTree(tree, $event)">
+                Sil
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-
-    <!-- Empty State (İlk Açılış) -->
-    <div *ngIf="!hasSearched() && !loading() && !error()" class="state-message empty">
-      <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" viewBox="0 0 16 16">
-        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-        <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
-      </svg>
-      <p>Filtre seçerek "Sorgula" butonuna basın</p>
-    </div>
-
-    <!-- No Results State -->
-    <div *ngIf="hasSearched() && trees().length === 0 && !loading() && !error()" class="state-message empty">
-      <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" viewBox="0 0 16 16">
-        <path d="M14.778.085A.5.5 0 0 1 15 .5V8a.5.5 0 0 1-.314.464L8 11.5 1.314 8.464A.5.5 0 0 1 1 8V.5a.5.5 0 0 1 .707-.455l6.5 3.25a.5.5 0 0 0 .586 0l6.5-3.25a.5.5 0 0 0 .485-.06z"/>
-        <path d="M7.5 6.5 1 3.5v4.586l6.5 3.25V6.5z"/>
-        <path d="M14.5 3.5 8 6.5v4.836l6.5-3.25V3.5z"/>
-      </svg>
-      <p>Sonuç bulunamadı</p>
-    </div>
-
-    <!-- Tablo -->
-    <table *ngIf="trees().length > 0 && !loading()" class="data-table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Kod</th>
-          <th>Ad</th>
-          <th>Durum</th>
-          <th>Son İşlem Tarihi</th>
-          <th>İşlemler</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let tree of trees()" (click)="selectTree(tree)" class="clickable-row">
-          <td>{{ tree.id }}</td>
-          <td><strong>{{ tree.code }}</strong></td>
-          <td>{{ tree.name }}</td>
-          <td>
-            <span [class]="getStatusClass(tree.statusCode)">
-              {{ getStatusText(tree.statusCode) }}
-            </span>
-          </td>
-          <td>{{ tree.updatedAtUtc ? (tree.updatedAtUtc | date:'dd.MM.yyyy HH:mm') : '-' }}</td>
-          <td class="action-buttons">
-            <button class="btn btn-sm btn-primary" (click)="navigateToTables(tree.id); $event.stopPropagation()" title="Tabloları yönet">
-              📋 Tablolar
-            </button>
-            <button class="btn btn-sm btn-info" (click)="openUpdateModal(tree); $event.stopPropagation()">
-              Düzenle
-            </button>
-            <button class="btn btn-sm btn-danger" (click)="deleteTree(tree, $event)">
-              Sil
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
   </div>
 </div>
 
