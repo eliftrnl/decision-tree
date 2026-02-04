@@ -123,6 +123,7 @@ export class ColumnManagementComponent implements OnInit {
     }
 
     const request = {
+      tableId: this.tableId,
       columnName: this.form.columnName!,
       excelHeaderName: this.form.excelHeaderName || null,
       description: this.form.description || null,

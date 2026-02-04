@@ -194,6 +194,86 @@ export class DataEntryComponent implements OnInit {
     window.location.href = `http://localhost:5135/api/decision-trees/${this.dtId()}/data/export-excel`;
   }
 
+  triggerImportExcel() {
+    // File input'u açar
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.click();
+    }
+  }
+
+  onExcelFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.name.endsWith('.xlsx')) {
+      alert('Sadece Excel (.xlsx) dosyaları yüklenebilir');
+      return;
+    }
+
+    // Onay iste (veri değişir mi?)
+    const confirmReplace = confirm(
+      'Mevcut verileri yeni Excel dosyasının verileriyle değiştirilsin mi?\n\n' +
+      'EVET - Eski veriler silinip yeni veriler yüklenir\n' +
+      'HAYIR - Yeni veriler mevcut verilere eklenir'
+    );
+
+    this.loading.set(true);
+
+    this.dataEntryService.importExcel(this.dtId(), file, confirmReplace).subscribe({
+      next: (response: any) => {
+        alert(
+          `✅ Import başarılı!\n\n` +
+          `Yüklenen satırlar: ${response.totalRowsImported || 0}\n` +
+          `İşlenen satırlar: ${response.totalRowsProcessed || 0}\n` +
+          `Hatalar: ${response.totalErrors || 0}`
+        );
+
+        // Verileri yenile
+        this.loadDataRows();
+        this.loading.set(false);
+
+        // File input'u temizle
+        input.value = '';
+      },
+      error: (err: any) => {
+        const errorMessage = err.error?.message || 'Bilinmeyen bir hata oluştu';
+        const errors = err.error?.errors || [];
+        const warnings = err.error?.warnings || [];
+
+        let fullMessage = `❌ Import hatası:\n\n${errorMessage}`;
+
+        if (errors.length > 0) {
+          fullMessage += `\n\nHatalar (ilk 5):\n`;
+          errors.slice(0, 5).forEach((e: string) => {
+            fullMessage += `• ${e}\n`;
+          });
+          if (errors.length > 5) {
+            fullMessage += `• ... ve ${errors.length - 5} daha\n`;
+          }
+        }
+
+        if (warnings.length > 0) {
+          fullMessage += `\n\nUyarılar (ilk 5):\n`;
+          warnings.slice(0, 5).forEach((w: string) => {
+            fullMessage += `• ${w}\n`;
+          });
+          if (warnings.length > 5) {
+            fullMessage += `• ... ve ${warnings.length - 5} daha\n`;
+          }
+        }
+
+        alert(fullMessage);
+        this.loading.set(false);
+        input.value = '';
+      }
+    });
+  }
+
   goBack() {
     this.router.navigate(['/decision-trees', this.dtId(), 'tables']);
   }

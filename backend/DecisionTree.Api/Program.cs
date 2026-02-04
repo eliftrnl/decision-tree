@@ -10,6 +10,7 @@ builder.Services.AddControllers();
 builder.Services.AddScoped<ExcelService>();
 builder.Services.AddScoped<JsonBuilderService>();
 builder.Services.AddScoped<ValidationService>();
+builder.Services.AddScoped<JobApplicationSeedService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -41,6 +42,16 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseMySql(cs, ServerVersion.AutoDetect(cs)));
 
 var app = builder.Build();
+
+// Seed Job Application Data
+if (app.Environment.IsDevelopment())
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var seedService = scope.ServiceProvider.GetRequiredService<JobApplicationSeedService>();
+        await seedService.SeedDataAsync();
+    }
+}
 
 if (app.Environment.IsDevelopment())
 {

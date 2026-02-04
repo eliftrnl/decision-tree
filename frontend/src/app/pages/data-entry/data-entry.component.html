@@ -5,6 +5,8 @@
     <div class="header-actions">
       <button class="btn-secondary" (click)="exportJson()" [disabled]="dataRows().length === 0">📥 JSON Dışa Aktar</button>
       <button class="btn-secondary" (click)="exportExcel()" [disabled]="dataRows().length === 0">📥 Excel Dışa Aktar</button>
+      <button class="btn-success" (click)="triggerImportExcel()">📤 Excel İçe Aktar</button>
+      <input #excelImportInput type="file" accept=".xlsx" (change)="onExcelFileSelected($event)" hidden />
     </div>
   </div>
 
