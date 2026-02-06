@@ -149,9 +149,8 @@
     </div>
 
     <div class="modal-footer">
-      <button class="btn btn-secondary" (click)="closeModal()">İptal</button>
       <button class="btn btn-primary" (click)="saveTable()" [disabled]="!form.tableName">
-        {{ modalMode() === 'create' ? 'Oluştur' : 'Güncelle' }}
+        {{ modalMode() === 'create' ? 'Kaydet' : 'Güncelle' }}
       </button>
     </div>
   </div>
