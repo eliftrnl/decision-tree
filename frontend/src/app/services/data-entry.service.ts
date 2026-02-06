@@ -16,34 +16,27 @@ export interface DataRowCreate {
   rowCode?: string;
 }
 
-export interface GenerateJsonRequest {
+export interface JsonExportMetadata {
   decisionTreeId: number;
-  includeInactiveTables?: boolean;
-  includeInactiveColumns?: boolean;
-}
-
-export interface JsonOutput {
   decisionTreeCode: string;
   decisionTreeName: string;
   schemaVersion: number;
-  generatedAt: string;
-  tables: TableJsonOutput[];
+  exportedAtUtc: string;
 }
 
-export interface TableJsonOutput {
-  tableName: string;
-  tableCode: string;
-  direction: string;
-  metadata: ColumnMetadata[];
-  rows: any[];
+export interface JsonTableValue {
+  metadata: Record<string, string>[];
+  data: any[][];
 }
 
-export interface ColumnMetadata {
-  columnName: string;
-  columnCode: string;
-  dataType: string;
-  isRequired: boolean;
-  orderIndex: number;
+export interface JsonTableWrapper {
+  name: string;
+  value: JsonTableValue;
+}
+
+export interface JsonExportResponse {
+  metadata: JsonExportMetadata;
+  tables: JsonTableWrapper[];
 }
 
 @Injectable({
@@ -83,12 +76,16 @@ export class DataEntryService {
     );
   }
 
-  // POST /api/decision-trees/{dtId}/data/generate-json
-  generateJson(dtId: number, request?: GenerateJsonRequest): Observable<JsonOutput> {
-    return this.http.post<JsonOutput>(
-      `${this.baseUrl}/decision-trees/${dtId}/data/generate-json`,
-      request || { decisionTreeId: dtId }
+  // GET /api/decision-trees/{dtId}/data/export-json
+  exportJson(dtId: number): Observable<JsonExportResponse> {
+    return this.http.get<JsonExportResponse>(
+      `${this.baseUrl}/decision-trees/${dtId}/data/export-json`
     );
+  }
+
+  // GET /api/decision-trees/{dtId}/data/generate-json (DEPRECATED - redirects to exportJson)
+  generateJson(dtId: number): Observable<JsonExportResponse> {
+    return this.exportJson(dtId);
   }
 
   // POST /api/decision-trees/{dtId}/data/parse-json

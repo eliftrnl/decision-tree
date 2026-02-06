@@ -1,12 +1,12 @@
 namespace DecisionTree.Api.Contracts.DataEntry;
 
 /// <summary>
-/// Complete JSON export response with metadata and data
+/// Complete JSON export response with metadata and tables
 /// Used for exporting decision tree data as JSON
 /// </summary>
 public record JsonExportResponse(
     JsonMetadata Metadata,
-    List<JsonTableOutput> Tables
+    List<JsonTableWrapper> Tables
 );
 
 /// <summary>
@@ -22,16 +22,22 @@ public record JsonMetadata(
 );
 
 /// <summary>
-/// Table section in JSON export
-/// Each table can have metadata (columns) and data (rows)
-/// Tables with no data are excluded from export
+/// Table wrapper for JSON export
+/// Each table has a name and value containing metadata and data arrays
 /// </summary>
-public record JsonTableOutput(
-    int TableId,
-    string TableName,
-    string Direction, // "Input" or "Output"
-    List<JsonColumnMetadata> Columns,
-    List<Dictionary<string, object?>> Rows
+public record JsonTableWrapper(
+    string name,
+    JsonTableValue value
+);
+
+/// <summary>
+/// Table value containing metadata and data arrays
+/// Metadata describes column types and names
+/// Data contains arrays of row values
+/// </summary>
+public record JsonTableValue(
+    List<Dictionary<string, string>> metadata,
+    List<List<object?>> data
 );
 
 /// <summary>

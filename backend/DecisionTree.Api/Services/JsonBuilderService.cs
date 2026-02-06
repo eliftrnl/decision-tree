@@ -52,7 +52,7 @@ public class JsonBuilderService
         );
 
         // Build tables
-        var tables = new List<JsonTableOutput>();
+        var tables = new List<JsonTableWrapper>();
 
         foreach (var table in dt.Tables)
         {
@@ -80,25 +80,38 @@ public class JsonBuilderService
                 .ThenBy(c => c.Id)
                 .ToList();
 
-            // Build column metadata
-            var columnMetadata = columns.Select(c => new JsonColumnMetadata(
-                ColumnId: c.Id,
-                ColumnName: c.ColumnName,
-                DataType: c.DataType.ToString(),
-                IsRequired: c.IsRequired,
-                Format: c.Format,
-                OrderIndex: c.OrderIndex
-            )).ToList();
+            // Build metadata object with column names and types
+            var metadataDict = new Dictionary<string, string>();
+            foreach (var column in columns)
+            {
+                metadataDict[column.ColumnName] = column.DataType.ToString();
+            }
+            var metadataList = new List<Dictionary<string, string>> { metadataDict };
 
-            // Parse row data from JSON strings
-            var rows = new List<Dictionary<string, object?>>();
+            // Parse row data and convert to arrays
+            var dataArrays = new List<List<object?>>();
             foreach (var dataRow in dataRows)
             {
                 try
                 {
                     var rowDict = JsonSerializer.Deserialize<Dictionary<string, object?>>(dataRow.RowDataJson)
                         ?? new Dictionary<string, object?>();
-                    rows.Add(rowDict);
+                    
+                    // Convert row to array of values in column order
+                    var rowArray = new List<object?>();
+                    foreach (var column in columns)
+                    {
+                        if (rowDict.TryGetValue(column.ColumnName, out var value))
+                        {
+                            rowArray.Add(value?.ToString() ?? null);
+                        }
+                        else
+                        {
+                            rowArray.Add(null);
+                        }
+                    }
+                    
+                    dataArrays.Add(rowArray);
                 }
                 catch (JsonException ex)
                 {
@@ -107,16 +120,16 @@ public class JsonBuilderService
                 }
             }
 
-            // Build table output
-            var tableOutput = new JsonTableOutput(
-                TableId: table.Id,
-                TableName: table.TableName,
-                Direction: table.Direction.ToString(),
-                Columns: columnMetadata,
-                Rows: rows
+            // Build table wrapper with name and value
+            var tableWrapper = new JsonTableWrapper(
+                name: table.TableName,
+                value: new JsonTableValue(
+                    metadata: metadataList,
+                    data: dataArrays
+                )
             );
 
-            tables.Add(tableOutput);
+            tables.Add(tableWrapper);
         }
 
         return new JsonExportResponse(metadata, tables);

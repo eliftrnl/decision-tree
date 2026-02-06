@@ -113,13 +113,13 @@
 <div *ngIf="showModal()" class="modal-overlay" (click)="closeModal()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>{{ modalMode() === 'create' ? 'Yeni Karar Ağacı' : 'Karar Ağacı Düzenle' }}</h2>
+      <h2>{{ modalMode() === 'create' ? 'Yeni Karar Ağacı Tanımla' : 'Karar Ağacı Düzenle' }}</h2>
       <button class="close-btn" (click)="closeModal()">&times;</button>
     </div>
 
     <div class="modal-body">
       <div class="form-group">
-        <label for="modal-code">Kod *</label>
+        <label for="modal-code">Karar Ağacı Kodu *</label>
         <input 
           id="modal-code" 
           type="text" 
@@ -130,7 +130,7 @@
       </div>
 
       <div class="form-group">
-        <label for="modal-name">Ad *</label>
+        <label for="modal-name">Karar Ağacı Adı *</label>
         <input 
           id="modal-name" 
           type="text" 
@@ -150,9 +150,8 @@
     </div>
 
     <div class="modal-footer">
-      <button class="btn btn-secondary" (click)="closeModal()">İptal</button>
       <button class="btn btn-primary" (click)="saveTree()" [disabled]="!form.code || !form.name">
-        {{ modalMode() === 'create' ? 'Oluştur' : 'Güncelle' }}
+        {{ modalMode() === 'create' ? 'Kaydet' : 'Güncelle' }}
       </button>
     </div>
   </div>
