@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -14,6 +14,8 @@ import { ColumnService, TableColumn } from '../../services/column.service';
   styleUrls: ['./data-entry.component.css']
 })
 export class DataEntryComponent implements OnInit {
+  @ViewChild('excelImportInput') excelImportInput?: ElementRef<HTMLInputElement>;
+
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly dataEntryService = inject(DataEntryService);
@@ -195,10 +197,9 @@ export class DataEntryComponent implements OnInit {
   }
 
   triggerImportExcel() {
-    // File input'u açar
-    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    if (fileInput) {
-      fileInput.click();
+    // Template reference variable ile file input'u aç
+    if (this.excelImportInput?.nativeElement) {
+      this.excelImportInput.nativeElement.click();
     }
   }
 
@@ -228,27 +229,45 @@ export class DataEntryComponent implements OnInit {
       next: (response: any) => {
         alert(
           `✅ Import başarılı!\n\n` +
-          `Yüklenen satırlar: ${response.totalRowsImported || 0}\n` +
-          `İşlenen satırlar: ${response.totalRowsProcessed || 0}\n` +
-          `Hatalar: ${response.totalErrors || 0}`
+          `Yüklenen satırlar: ${response.importedRowsCount || 0}\n` +
+          `İşlenen tablolar: ${response.tablesProcessed || 0}\n` +
+          `Hatalar: ${response.errors?.length || 0}`
         );
 
-        // Verileri yenile
-        this.loadDataRows();
+        // Seçili table'ı yeniden seç ve verileri taze yükle
+        if (this.selectedTable()) {
+          this.selectTable(this.selectedTable()!);
+        }
+
         this.loading.set(false);
 
         // File input'u temizle
-        input.value = '';
+        if (this.excelImportInput?.nativeElement) {
+          this.excelImportInput.nativeElement.value = '';
+        }
       },
       error: (err: any) => {
         const errorMessage = err.error?.message || 'Bilinmeyen bir hata oluştu';
+        const errorCode = err.error?.code || 'UNKNOWN_ERROR';
         const errors = err.error?.errors || [];
         const warnings = err.error?.warnings || [];
+        const details = err.error?.details || null;
+        const uploadedFileName = err.error?.uploadedFileName || null;
 
-        let fullMessage = `❌ Import hatası:\n\n${errorMessage}`;
+        let fullMessage = `❌ Import Hatası\n\n`;
+        fullMessage += `Kod: ${errorCode}\n`;
+        fullMessage += `Mesaj: ${errorMessage}\n`;
+
+        if (uploadedFileName) {
+          fullMessage += `Dosya: ${uploadedFileName}\n`;
+        }
+
+        if (details) {
+          fullMessage += `\nDetaylar: ${details}\n`;
+        }
 
         if (errors.length > 0) {
-          fullMessage += `\n\nHatalar (ilk 5):\n`;
+          fullMessage += `\n📍 Hatalar (ilk 5):\n`;
           errors.slice(0, 5).forEach((e: string) => {
             fullMessage += `• ${e}\n`;
           });
@@ -258,7 +277,7 @@ export class DataEntryComponent implements OnInit {
         }
 
         if (warnings.length > 0) {
-          fullMessage += `\n\nUyarılar (ilk 5):\n`;
+          fullMessage += `\n⚠️  Uyarılar (ilk 5):\n`;
           warnings.slice(0, 5).forEach((w: string) => {
             fullMessage += `• ${w}\n`;
           });
@@ -267,9 +286,12 @@ export class DataEntryComponent implements OnInit {
           }
         }
 
+        console.error('Excel Import Error:', err);
         alert(fullMessage);
         this.loading.set(false);
-        input.value = '';
+        if (this.excelImportInput?.nativeElement) {
+          this.excelImportInput.nativeElement.value = '';
+        }
       }
     });
   }

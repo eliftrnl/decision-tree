@@ -435,7 +435,7 @@ public class DataEntryController : ControllerBase
                     t.DecisionTreeId == dtId && 
                     t.TableName == tableJson.TableName, ct);
 
-            if (table is null)
+            if (table is null) 
             {
                 _logger.LogWarning("Table {TableName} not found, skipping", tableJson.TableName);
                 continue;
@@ -487,14 +487,22 @@ public class DataEntryController : ControllerBase
         [FromQuery] bool replaceExisting = false,
         CancellationToken ct = default)
     {
+        // Detaylı validation ve logging
         if (file == null || file.Length == 0)
         {
-            return BadRequest(new { message = "No file uploaded" });
+            return BadRequest(new { 
+                message = "No file uploaded",
+                code = "NO_FILE"
+            });
         }
 
         if (!file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
         {
-            return BadRequest(new { message = "Only .xlsx files are supported" });
+            return BadRequest(new { 
+                message = $"Only .xlsx files are supported. Uploaded file: {file.FileName}",
+                code = "INVALID_FORMAT",
+                uploadedFileName = file.FileName
+            });
         }
 
         // Verify decision tree exists
@@ -503,7 +511,10 @@ public class DataEntryController : ControllerBase
 
         if (decisionTree is null)
         {
-            return NotFound(new { message = "Decision tree not found" });
+            return NotFound(new { 
+                message = $"Decision tree with ID {dtId} not found",
+                code = "TREE_NOT_FOUND"
+            });
         }
 
         // Get tables with columns
@@ -514,15 +525,30 @@ public class DataEntryController : ControllerBase
 
         if (tables.Count == 0)
         {
-            return BadRequest(new { message = "No active tables found for this decision tree" });
+            return BadRequest(new { 
+                message = "No active tables found for this decision tree",
+                code = "NO_TABLES"
+            });
         }
 
         // Read Excel file
         ExcelReadResult excelResult;
         
-        using (var stream = file.OpenReadStream())
+        try
         {
-            excelResult = await _excelService.ReadExcelAsync(stream, tables, ct);
+            using (var stream = file.OpenReadStream())
+            {
+                excelResult = await _excelService.ReadExcelAsync(stream, tables, ct);
+            }
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new
+            {
+                message = $"Error reading Excel file: {ex.Message}",
+                code = "EXCEL_READ_ERROR",
+                details = ex.InnerException?.Message
+            });
         }
 
         if (!excelResult.Success)
@@ -530,43 +556,73 @@ public class DataEntryController : ControllerBase
             return BadRequest(new
             {
                 message = "Failed to read Excel file",
-                errors = excelResult.Errors
+                code = "EXCEL_PARSE_ERROR",
+                errors = excelResult.Errors,
+                warnings = excelResult.Warnings
+            });
+        }
+
+        if (excelResult.TableData.Count == 0)
+        {
+            return BadRequest(new
+            {
+                message = "No data found in Excel file worksheets",
+                code = "NO_DATA_FOUND",
+                warnings = excelResult.Warnings
             });
         }
 
         // Import data into database
         var importedRowsCount = 0;
+        var allErrors = new List<string>();
 
-        foreach (var (tableName, tableData) in excelResult.TableData)
+        try
         {
-            var table = tables.FirstOrDefault(t => t.TableName == tableName);
-            if (table == null) continue;
-
-            // Optionally clear existing data
-            if (replaceExisting)
+            foreach (var (tableName, tableData) in excelResult.TableData)
             {
-                var existingRows = _db.DecisionTreeData.Where(d => d.TableId == table.Id);
-                _db.DecisionTreeData.RemoveRange(existingRows);
-            }
-
-            // Insert rows
-            foreach (var rowDict in tableData.Rows)
-            {
-                var rowJson = JsonSerializer.Serialize(rowDict);
-                var dataRow = new DecisionTreeData
+                var table = tables.FirstOrDefault(t => t.TableName == tableName);
+                if (table == null)
                 {
-                    TableId = table.Id,
-                    RowDataJson = rowJson,
-                    CreatedAtUtc = DateTime.UtcNow,
-                    UpdatedAtUtc = DateTime.UtcNow
-                };
+                    allErrors.Add($"Table '{tableName}' not found in database");
+                    continue;
+                }
 
-                _db.DecisionTreeData.Add(dataRow);
-                importedRowsCount++;
+                // Optionally clear existing data
+                if (replaceExisting)
+                {
+                    var existingRows = _db.DecisionTreeData.Where(d => d.TableId == table.Id);
+                    _db.DecisionTreeData.RemoveRange(existingRows);
+                }
+
+                // Insert rows
+                foreach (var rowDict in tableData.Rows)
+                {
+                    var rowJson = JsonSerializer.Serialize(rowDict);
+                    var dataRow = new DecisionTreeData
+                    {
+                        TableId = table.Id,
+                        RowDataJson = rowJson,
+                        CreatedAtUtc = DateTime.UtcNow,
+                        UpdatedAtUtc = DateTime.UtcNow
+                    };
+
+                    _db.DecisionTreeData.Add(dataRow);
+                    importedRowsCount++;
+                }
             }
-        }
 
-        await _db.SaveChangesAsync(ct);
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new
+            {
+                message = $"Error saving data to database: {ex.Message}",
+                code = "DATABASE_ERROR",
+                details = ex.InnerException?.Message,
+                importedRowsBeforeError = importedRowsCount
+            });
+        }
 
         return Ok(new
         {
@@ -574,7 +630,7 @@ public class DataEntryController : ControllerBase
             importedRowsCount,
             tablesProcessed = excelResult.TableData.Count,
             warnings = excelResult.Warnings,
-            errors = excelResult.Errors.Concat(
+            errors = allErrors.Concat(
                 excelResult.TableData.SelectMany(td => td.Value.Errors)
             ).ToList()
         });
