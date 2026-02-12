@@ -76,28 +76,30 @@
         <div *ngFor="let col of columns()" class="form-group">
           <label>{{ col.columnName }} {{ col.isRequired ? '*' : '(Opsiyonel)' }}</label>
           <input 
-            *ngIf="col.dataType === 1 || col.dataType === 2"
+            *ngIf="col.dataType == 1 || col.dataType == 2"
             type="text"
             [value]="newRowData()[col.columnName] || ''"
             (input)="updateFieldValue(col.columnName, $any($event.target).value)"
             [required]="col.isRequired"
+            placeholder="Metin girin..."
           />
           <input 
-            *ngIf="col.dataType === 3"
+            *ngIf="col.dataType == 3"
             type="number"
             [value]="newRowData()[col.columnName] || ''"
             (input)="updateFieldValue(col.columnName, $any($event.target).value)"
             [required]="col.isRequired"
+            placeholder="Sayı girin..."
           />
           <input 
-            *ngIf="col.dataType === 4"
+            *ngIf="col.dataType == 4"
             type="date"
             [value]="newRowData()[col.columnName] || ''"
             (input)="updateFieldValue(col.columnName, $any($event.target).value)"
             [required]="col.isRequired"
           />
           <input 
-            *ngIf="col.dataType === 5"
+            *ngIf="col.dataType == 5"
             type="checkbox"
             [checked]="newRowData()[col.columnName]"
             (change)="updateFieldValue(col.columnName, $any($event.target).checked)"
@@ -128,28 +130,30 @@
         <div *ngFor="let col of columns()" class="form-group">
           <label>{{ col.columnName }} {{ col.isRequired ? '*' : '(Opsiyonel)' }}</label>
           <input 
-            *ngIf="col.dataType === 1 || col.dataType === 2"
+            *ngIf="col.dataType == 1 || col.dataType == 2"
             type="text"
             [value]="newRowData()[col.columnName] || ''"
             (input)="updateFieldValue(col.columnName, $any($event.target).value)"
             [required]="col.isRequired"
+            placeholder="Metin girin..."
           />
           <input 
-            *ngIf="col.dataType === 3"
+            *ngIf="col.dataType == 3"
             type="number"
             [value]="newRowData()[col.columnName] || ''"
             (input)="updateFieldValue(col.columnName, $any($event.target).value)"
             [required]="col.isRequired"
+            placeholder="Sayı girin..."
           />
           <input 
-            *ngIf="col.dataType === 4"
+            *ngIf="col.dataType == 4"
             type="date"
             [value]="newRowData()[col.columnName] || ''"
             (input)="updateFieldValue(col.columnName, $any($event.target).value)"
             [required]="col.isRequired"
           />
           <input 
-            *ngIf="col.dataType === 5"
+            *ngIf="col.dataType == 5"
             type="checkbox"
             [checked]="newRowData()[col.columnName]"
             (change)="updateFieldValue(col.columnName, $any($event.target).checked)"
