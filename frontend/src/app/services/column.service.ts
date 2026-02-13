@@ -10,6 +10,7 @@ export interface TableColumn {
   description?: string;
   dataType: number | string; // 1=String, 2=Int, 3=Decimal, 4=Date, 5=Boolean
   isRequired: boolean;
+  isUniqueIdentifier?: boolean; // Excel import için satırları eşleştirmek için kullan
   statusCode: number | string; // 1=Active, 2=Passive
   orderIndex: number;
   format?: string;
@@ -26,6 +27,7 @@ export interface ColumnCreateRequest {
   description?: string;
   dataType: number;
   isRequired: boolean;
+  isUniqueIdentifier?: boolean;
   direction: number;
   orderIndex?: number;
   format?: string;

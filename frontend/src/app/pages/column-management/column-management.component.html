@@ -37,6 +37,7 @@
             <th>Kolon Adı</th>
             <th>Veri Tipi</th>
             <th>Zorunlu</th>
+            <th>Benzersiz Anahtar</th>
             <th>Format</th>
             <th>Max Uzunluk</th>
             <th>Durum</th>
@@ -51,6 +52,10 @@
             <td>
               <span *ngIf="column.isRequired" class="badge badge-success">Evet</span>
               <span *ngIf="!column.isRequired" class="badge badge-gray">Hayır</span>
+            </td>
+            <td>
+              <span *ngIf="column.isUniqueIdentifier" class="badge badge-warning">🔑 Evet</span>
+              <span *ngIf="!column.isUniqueIdentifier" class="badge badge-gray">Hayır</span>
             </td>
             <td>{{ column.format || '-' }}</td>
             <td>{{ column.maxLength || '-' }}</td>
@@ -132,6 +137,19 @@
               [(ngModel)]="form.isRequired"
               class="form-checkbox"
             />
+          </div>
+
+          <div class="form-group">
+            <label>Excel İçe Aktar için Benzersiz Anahtar</label>
+            <input
+              type="checkbox"
+              [(ngModel)]="form.isUniqueIdentifier"
+              class="form-checkbox"
+              title="Bu kolonu satırları eşleştirmek için kullan (TCKN, ID vb.)"
+            />
+            <small style="display: block; margin-top: 4px; color: #666;">
+              Excel'den veri alırken satırları bu alan ile eşleştir
+            </small>
           </div>
         </div>
 

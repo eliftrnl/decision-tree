@@ -87,6 +87,7 @@ export class ColumnManagementComponent implements OnInit {
       columnName: '',
       dataType: 1,
       isRequired: false,
+      isUniqueIdentifier: false,
       orderIndex: this.columns().length,
       format: '',
       maxLength: undefined
@@ -103,6 +104,7 @@ export class ColumnManagementComponent implements OnInit {
       description: column.description,
       dataType: column.dataType,
       isRequired: column.isRequired,
+      isUniqueIdentifier: column.isUniqueIdentifier || false,
       statusCode: column.statusCode,
       orderIndex: column.orderIndex,
       format: column.format,
@@ -129,6 +131,7 @@ export class ColumnManagementComponent implements OnInit {
       description: this.form.description || null,
       dataType: this.form.dataType!,
       isRequired: this.form.isRequired || false,
+      isUniqueIdentifier: this.form.isUniqueIdentifier || false,
       statusCode: this.form.statusCode || 1,
       orderIndex: this.form.orderIndex || 0,
       format: this.form.format || null,
