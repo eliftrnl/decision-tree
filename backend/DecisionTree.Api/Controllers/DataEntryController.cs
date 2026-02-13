@@ -587,14 +587,118 @@ public class DataEntryController : ControllerBase
                     continue;
                 }
 
-                // Optionally clear existing data
+                // 6.2.2: Get unique identifier column for smart row matching
+                var uniqueIdColumn = tableData.UniqueIdentifierColumnName;
+                var hasUniqueIdentifier = !string.IsNullOrWhiteSpace(uniqueIdColumn);
+
+                // 6.2.3: Handle replace vs merge strategy
                 if (replaceExisting)
                 {
+                    // REPLACE STRATEGY: Delete all existing data and insert new rows
+                    _logger.LogInformation(
+                        "Replacing all data in table '{TableName}' (total rows to insert: {RowCount})",
+                        tableName, tableData.Rows.Count);
+                    
                     var existingRows = _db.DecisionTreeData.Where(d => d.TableId == table.Id);
                     _db.DecisionTreeData.RemoveRange(existingRows);
                 }
+                else
+                {
+                    // MERGE STRATEGY: Update matching rows, insert new ones
+                    if (hasUniqueIdentifier)
+                    {
+                        _logger.LogInformation(
+                            "Merging data in table '{TableName}' using unique identifier '{UIDColumn}'",
+                            tableName, uniqueIdColumn);
+                        
+                        // Get existing data
+                        var existingDataRows = await _db.DecisionTreeData
+                            .Where(d => d.TableId == table.Id)
+                            .ToListAsync(ct);
 
-                // Insert rows
+                        foreach (var newRowDict in tableData.Rows)
+                        {
+                            if (!newRowDict.TryGetValue(uniqueIdColumn, out var newUidValue) || newUidValue == null)
+                            {
+                                allErrors.Add(
+                                    $"Row missing unique identifier column '{uniqueIdColumn}' - skipping this row");
+                                continue;
+                            }
+
+                            // Find matching existing row by unique identifier
+                            var matchingExistingRow = existingDataRows.FirstOrDefault(row =>
+                            {
+                                try
+                                {
+                                    var existingData = JsonSerializer.Deserialize<Dictionary<string, object?>>(
+                                        row.RowDataJson) ?? new();
+                                    return existingData.TryGetValue(uniqueIdColumn, out var existingUidValue) &&
+                                           existingUidValue?.ToString() == newUidValue.ToString();
+                                }
+                                catch
+                                {
+                                    return false;
+                                }
+                            });
+
+                            if (matchingExistingRow != null)
+                            {
+                                // UPDATE: Replace existing row's JSON
+                                matchingExistingRow.RowDataJson = JsonSerializer.Serialize(newRowDict);
+                                matchingExistingRow.UpdatedAtUtc = DateTime.UtcNow;
+                                _logger.LogDebug("Updated row with {UIDColumn}={UIDValue} in table '{TableName}'",
+                                    uniqueIdColumn, newUidValue, tableName);
+                            }
+                            else
+                            {
+                                // INSERT: New row
+                                var newDataRow = new DecisionTreeData
+                                {
+                                    TableId = table.Id,
+                                    RowDataJson = JsonSerializer.Serialize(newRowDict),
+                                    CreatedAtUtc = DateTime.UtcNow,
+                                    UpdatedAtUtc = DateTime.UtcNow
+                                };
+                                _db.DecisionTreeData.Add(newDataRow);
+                                _logger.LogDebug("Inserted new row with {UIDColumn}={UIDValue} in table '{TableName}'",
+                                    uniqueIdColumn, newUidValue, tableName);
+                            }
+
+                            importedRowsCount++;
+                        }
+                    }
+                    else
+                    {
+                        // No unique identifier - warn user and insert as new rows
+                        _logger.LogWarning(
+                            "Table '{TableName}' has no unique identifier column defined. " +
+                            "Import will only INSERT mode (not merge). Set IsUniqueIdentifier on a column for merge support.",
+                            tableName);
+                        
+                        allErrors.Add(
+                            $"Table '{tableName}' has no unique identifier. " +
+                            $"Rows are being inserted as new (not merged with existing data). " +
+                            $"Set IsUniqueIdentifier=true on one column to enable merge mode.");
+
+                        // Insert as new rows
+                        foreach (var rowDict in tableData.Rows)
+                        {
+                            var rowJson = JsonSerializer.Serialize(rowDict);
+                            var dataRow = new DecisionTreeData
+                            {
+                                TableId = table.Id,
+                                RowDataJson = rowJson,
+                                CreatedAtUtc = DateTime.UtcNow,
+                                UpdatedAtUtc = DateTime.UtcNow
+                            };
+                            _db.DecisionTreeData.Add(dataRow);
+                            importedRowsCount++;
+                        }
+                    }
+                    continue;
+                }
+
+                // REPLACE MODE: Insert all new rows
                 foreach (var rowDict in tableData.Rows)
                 {
                     var rowJson = JsonSerializer.Serialize(rowDict);
@@ -615,6 +719,7 @@ public class DataEntryController : ControllerBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error saving imported data to database");
             return BadRequest(new
             {
                 message = $"Error saving data to database: {ex.Message}",
@@ -626,7 +731,9 @@ public class DataEntryController : ControllerBase
 
         return Ok(new
         {
-            message = "Excel imported successfully",
+            message = replaceExisting 
+                ? "Excel imported successfully (REPLACE mode - all data replaced)" 
+                : "Excel imported successfully (MERGE mode - rows updated/inserted)",
             importedRowsCount,
             tablesProcessed = excelResult.TableData.Count,
             warnings = excelResult.Warnings,

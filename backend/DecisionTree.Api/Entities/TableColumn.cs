@@ -31,6 +31,13 @@ public sealed class TableColumn
 
     public bool IsRequired { get; set; } = false;
 
+    /// <summary>
+    /// Marks this column as unique identifier for row matching during Excel import
+    /// Only ONE column per table should have this set to true
+    /// Used to match incoming Excel rows to existing database records
+    /// </summary>
+    public bool IsUniqueIdentifier { get; set; } = false;
+
     public StatusCode StatusCode { get; set; } = StatusCode.Active;
 
     /// <summary>

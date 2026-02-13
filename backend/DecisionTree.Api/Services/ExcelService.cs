@@ -72,6 +72,8 @@ public class ExcelService
 
     /// <summary>
     /// Read a single worksheet and map to table columns
+    /// 6.2.1: Validates schema before reading data
+    /// 6.2.2: Uses unique identifier for row matching
     /// </summary>
     private TableDataResult ReadWorksheet(ExcelWorksheet worksheet, DecisionTreeTable table)
     {
@@ -105,6 +107,23 @@ public class ExcelService
             {
                 columnMap[column.ExcelHeaderName] = column;
             }
+        }
+
+        // 6.2.1: SCHEMA VALIDATION - Check if Excel columns match database schema
+        var schemaValidation = ValidateSchema(headers, columnMap, table);
+        if (!schemaValidation.IsValid)
+        {
+            result.Errors.AddRange(schemaValidation.Errors);
+            return result; // Stop processing if schema is invalid
+        }
+
+        // 6.2.2: Get unique identifier column if exists
+        var uniqueIdentifierColumn = table.Columns
+            .FirstOrDefault(c => c.IsUniqueIdentifier && c.StatusCode == EntityStatusCode.Active);
+        
+        if (uniqueIdentifierColumn != null)
+        {
+            result.UniqueIdentifierColumnName = uniqueIdentifierColumn.ColumnName;
         }
 
         // Read data rows (starting from row 2)
@@ -261,6 +280,58 @@ public class ExcelService
     }
 
     /// <summary>
+    /// 6.2.1: Validate Excel schema against database table definition
+    /// Returns validation result with errors if mismatch found
+    /// </summary>
+    private SchemaValidationResult ValidateSchema(
+        Dictionary<int, string> excelHeaders,
+        Dictionary<string, TableColumn> columnMap,
+        DecisionTreeTable table)
+    {
+        var result = new SchemaValidationResult { IsValid = true };
+
+        // Get all required columns from database (excluding optional ones)
+        var requiredDbColumns = table.Columns
+            .Where(c => c.IsRequired && c.StatusCode == EntityStatusCode.Active)
+            .ToList();
+
+        // Check if all required DB columns exist in Excel
+        foreach (var dbColumn in requiredDbColumns)
+        {
+            bool found = false;
+            
+            // Check if column name or excel header name exists in Excel
+            foreach (var excelHeader in excelHeaders.Values)
+            {
+                if (excelHeader.Equals(dbColumn.ColumnName, StringComparison.OrdinalIgnoreCase) ||
+                    (!string.IsNullOrWhiteSpace(dbColumn.ExcelHeaderName) && 
+                     excelHeader.Equals(dbColumn.ExcelHeaderName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                result.IsValid = false;
+                result.Errors.Add($"Required column '{dbColumn.ColumnName}' not found in Excel file");
+            }
+        }
+
+        // Warning: Check for unmatched Excel columns (columns in Excel that don't exist in DB)
+        foreach (var excelHeader in excelHeaders.Values)
+        {
+            if (!columnMap.ContainsKey(excelHeader))
+            {
+                result.Warnings.Add($"Excel column '{excelHeader}' does not match any database column (will be ignored)");
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Write data to Excel file
     /// Creates one worksheet per table
     /// First row = column headers
@@ -361,9 +432,26 @@ public class ExcelReadResult
 
 /// <summary>
 /// Data from a single table/worksheet
+/// 6.2.2: Stores unique identifier column name for row matching
 /// </summary>
 public class TableDataResult
 {
     public List<Dictionary<string, object?>> Rows { get; set; } = new();
     public List<string> Errors { get; set; } = new();
+    
+    /// <summary>
+    /// Column name marked as unique identifier for row matching
+    /// Used during import to match Excel rows to existing DB records
+    /// </summary>
+    public string? UniqueIdentifierColumnName { get; set; }
+}
+
+/// <summary>
+/// Result of schema validation
+/// </summary>
+public class SchemaValidationResult
+{
+    public bool IsValid { get; set; }
+    public List<string> Errors { get; set; } = new();
+    public List<string> Warnings { get; set; } = new();
 }
