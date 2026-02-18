@@ -1,0 +1,36 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Restore backend dependencies
+      run: cd backend/DecisionTree.Api && dotnet restore
+    
+    - name: Build backend
+      run: cd backend/DecisionTree.Api && dotnet build --no-restore
+    
+    - name: Install frontend dependencies
+      run: cd frontend && npm install
+    
+    - name: Build frontend
+      run: cd frontend && npm run build
