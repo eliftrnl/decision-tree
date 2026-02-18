@@ -1,0 +1,27 @@
+# Backend - .NET
+backend/**/bin/
+backend/**/obj/
+backend/**/.vs/
+backend/**/*.user
+backend/**/*.suo
+backend/**/.vscode/
+backend/**/appsettings.Development.json
+
+# Frontend - Angular
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/.vscode/
+
+# IDE
+.DS_Store
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Database
+*.db
+*.sqlite

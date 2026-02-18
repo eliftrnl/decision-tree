@@ -1,0 +1,157 @@
+<div class="container">
+  <div class="header">
+    <div class="header-left">
+      <button class="btn btn-secondary" (click)="goBack()">← Geri</button>
+      <h1>Tablo Yönetimi</h1>
+      <span class="subtitle">{{ decisionTreeCode }}</span>
+    </div>
+    <button class="btn btn-success" (click)="openCreateModal()">
+      + Yeni Tablo
+    </button>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error() && !loading()" class="alert alert-error">
+    {{ error() }}
+    <button class="btn btn-sm" (click)="error.set(null)">✕</button>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading()" class="loading-state">
+    <div class="spinner"></div>
+    <p>Yükleniyor...</p>
+  </div>
+
+  <!-- Tables Grid -->
+  <div *ngIf="!loading()" class="tables-grid">
+    <!-- Input Tables -->
+    <div class="table-section">
+      <h2 class="section-title input-title">
+        <span class="badge badge-input">Input</span>
+        Girdi Tabloları ({{ getInputTables().length }})
+      </h2>
+      
+      <div *ngIf="getInputTables().length === 0" class="empty-state">
+        <p>Henüz input tablosu eklenmemiş</p>
+      </div>
+
+      <div class="table-cards">
+        <div *ngFor="let table of getInputTables()" class="table-card">
+          <div class="card-header">
+            <h3>{{ table.tableName }}</h3>
+            <span [class]="getStatusClass(table.statusCode)">
+              {{ getStatusText(table.statusCode) }}
+            </span>
+          </div>
+          
+          <div class="card-body">
+            <div class="card-info">
+              <span class="info-label">Tablo ID:</span>
+              <span class="info-value">{{ table.id }}</span>
+            </div>
+          </div>
+
+          <div class="card-actions">
+            <button class="btn btn-sm btn-primary" (click)="navigateToColumns(table.id, table.tableName)">
+              📝 Kolonlar
+            </button>
+            <button class="btn btn-sm btn-info" (click)="openUpdateModal(table)">
+              Düzenle
+            </button>
+            <button class="btn btn-sm btn-danger" (click)="deleteTable(table)">
+              Sil
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Output Tables -->
+    <div class="table-section">
+      <h2 class="section-title output-title">
+        <span class="badge badge-output">Output</span>
+        Çıktı Tabloları ({{ getOutputTables().length }})
+      </h2>
+      
+      <div *ngIf="getOutputTables().length === 0" class="empty-state">
+        <p>Henüz output tablosu eklenmemiş</p>
+      </div>
+
+      <div class="table-cards">
+        <div *ngFor="let table of getOutputTables()" class="table-card">
+          <div class="card-header">
+            <h3>{{ table.tableName }}</h3>
+            <span [class]="getStatusClass(table.statusCode)">
+              {{ getStatusText(table.statusCode) }}
+            </span>
+          </div>
+          
+          <div class="card-body">
+            <div class="card-info">
+              <span class="info-label">Tablo ID:</span>
+              <span class="info-value">{{ table.id }}</span>
+            </div>
+          </div>
+
+          <div class="card-actions">
+            <button class="btn btn-sm btn-primary" (click)="navigateToColumns(table.id, table.tableName)">
+              📝 Kolonlar
+            </button>
+            <button class="btn btn-sm btn-info" (click)="openUpdateModal(table)">
+              Düzenle
+            </button>
+            <button class="btn btn-sm btn-danger" (click)="deleteTable(table)">
+              Sil
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div *ngIf="showModal()" class="modal-overlay" (click)="closeModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ modalMode() === 'create' ? 'Yeni Tablo' : 'Tablo Düzenle' }}</h2>
+      <button class="close-btn" (click)="closeModal()">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="modal-tableName">Tablo Adı *</label>
+        <input 
+          id="modal-tableName" 
+          type="text" 
+          [(ngModel)]="form.tableName" 
+          placeholder="örn: TOEI_MUSTERI"
+          required
+        />
+        <small>Büyük harf ve _ karakteri kullanın</small>
+      </div>
+
+      <div class="form-group">
+        <label for="modal-direction">Yön *</label>
+        <select id="modal-direction" [(ngModel)]="form.direction">
+          <option [ngValue]="1">Input (Girdi)</option>
+          <option [ngValue]="2">Output (Çıktı)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="modal-status">Durum *</label>
+        <select id="modal-status" [(ngModel)]="form.statusCode">
+          <option [ngValue]="1">Aktif</option>
+          <option [ngValue]="2">Pasif</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-primary" (click)="saveTable()" [disabled]="!form.tableName">
+        {{ modalMode() === 'create' ? 'Kaydet' : 'Güncelle' }}
+      </button>
+    </div>
+  </div>
+</div>

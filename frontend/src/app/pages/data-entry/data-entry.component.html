@@ -1,0 +1,264 @@
+<div class="container">
+  <div class="header">
+    <button class="btn-back" (click)="goBack()">← Geri</button>
+    <h1>Veri Girişi</h1>
+    <div class="header-actions">
+      <button class="btn-secondary" (click)="exportJson()" [disabled]="dataRows().length === 0 || loading()">📥 JSON Dışa Aktar</button>
+      <button class="btn-secondary" (click)="exportExcel()" [disabled]="dataRows().length === 0 || loading()">📥 Excel Dışa Aktar</button>
+      <button class="btn-secondary" (click)="exportCsv()" [disabled]="dataRows().length === 0 || loading()">📥 CSV Dışa Aktar</button>
+      <button class="btn-success" (click)="triggerImportExcel()" [disabled]="loading()">📤 Excel İçe Aktar</button>
+      <button class="btn-success" (click)="triggerImportCsv()" [disabled]="loading()">📤 CSV İçe Aktar</button>
+      
+      <!-- Dönüştürme Butonları -->
+      <button class="btn-conversion" (click)="triggerExcelToJsonConversion()" [disabled]="loading()" title="Excel dosyasını JSON formatına dönüştür">🔄 Excel → JSON</button>
+      <button class="btn-conversion" (click)="triggerJsonToExcelConversion()" [disabled]="loading()" title="JSON dosyasını Excel formatına dönüştür">🔄 JSON → Excel</button>
+      
+      <input #excelImportInput type="file" accept=".xlsx,.xlsm,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel.sheet.macroEnabled.12,application/vnd.ms-excel" (change)="onExcelFileSelected($event)" hidden />
+      <input #csvImportInput type="file" accept="text/csv,.csv" (change)="onCsvFileSelected($event)" hidden />
+    </div>
+  </div>
+
+  <!-- Tablo Seçimi -->
+  <div class="tables-section" *ngIf="tables().length > 0">
+    <h2>Tabloyu Seç</h2>
+    <div class="table-selector">
+      <button 
+        *ngFor="let table of tables()"
+        [class.active]="selectedTable()?.id === table.id"
+        (click)="selectTable(table)"
+        class="btn-table"
+      >
+        {{ table.tableName }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Veri Tablosu -->
+  <div class="data-section" *ngIf="selectedTable()">
+    <div class="section-header">
+      <h2>{{ selectedTable()?.tableName }} - Veriler</h2>
+      <button class="btn-success" (click)="openAddModal()">+ Yeni Satır Ekle</button>
+    </div>
+
+    <div *ngIf="loading()" class="loading">Yükleniyor...</div>
+
+    <table *ngIf="!loading()" class="data-table">
+      <thead>
+        <tr>
+          <th>SIRa</th>
+          <th *ngFor="let col of columns()">{{ col.columnName }}</th>
+          <th>İŞLEMLER</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of dataRows(); let i = index">
+          <td>{{ i + 1 }}</td>
+          <td *ngFor="let col of columns()">
+            {{ getColumnValue(row, col.columnName) }}
+          </td>
+          <td class="actions">
+            <button class="btn-edit" (click)="openEditModal(row)">Düzenle</button>
+            <button class="btn-delete" (click)="deleteRow(row)">Sil</button>
+          </td>
+        </tr>
+        <tr *ngIf="dataRows().length === 0">
+          <td [colSpan]="columns().length + 2" class="empty">Veri yok</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Yeni Satır Modal -->
+  <div *ngIf="showAddModal()" class="modal-overlay" (click)="closeAddModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Yeni Satır Ekle</h2>
+        <button class="btn-close" (click)="closeAddModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div *ngIf="validationErrors().length > 0" class="error-box">
+          <div *ngFor="let err of validationErrors()">{{ err }}</div>
+        </div>
+
+        <div *ngFor="let col of columns()" class="form-group">
+          <label>{{ col.columnName }} {{ col.isRequired ? '*' : '(Opsiyonel)' }}</label>
+          <input 
+            *ngIf="col.dataType == 1 || col.dataType == 2 || col.dataType === 'String' || col.dataType === 'Int'"
+            type="text"
+            [value]="newRowData()[col.columnName] || ''"
+            (input)="updateFieldValue(col.columnName, $any($event.target).value)"
+            [required]="col.isRequired"
+            placeholder="Metin girin..."
+          />
+          <input 
+            *ngIf="col.dataType == 3 || col.dataType === 'Decimal'"
+            type="number"
+            [value]="newRowData()[col.columnName] || ''"
+            (input)="updateFieldValue(col.columnName, $any($event.target).value)"
+            [required]="col.isRequired"
+            placeholder="Sayı girin..."
+          />
+          <input 
+            *ngIf="col.dataType == 4 || col.dataType === 'Date'"
+            type="date"
+            [value]="newRowData()[col.columnName] || ''"
+            (input)="updateFieldValue(col.columnName, $any($event.target).value)"
+            [required]="col.isRequired"
+          />
+          <input 
+            *ngIf="col.dataType == 5 || col.dataType === 'Boolean'"
+            type="checkbox"
+            [checked]="newRowData()[col.columnName]"
+            (change)="updateFieldValue(col.columnName, $any($event.target).checked)"
+          />
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="closeAddModal()">İptal</button>
+        <button class="btn-success" (click)="saveRow()">Ekle</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Düzenle Modal -->
+  <div *ngIf="showEditModal()" class="modal-overlay" (click)="closeEditModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Satırı Düzenle</h2>
+        <button class="btn-close" (click)="closeEditModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div *ngIf="validationErrors().length > 0" class="error-box">
+          <div *ngFor="let err of validationErrors()">{{ err }}</div>
+        </div>
+
+        <div *ngFor="let col of columns()" class="form-group">
+          <label>{{ col.columnName }} {{ col.isRequired ? '*' : '(Opsiyonel)' }}</label>
+          <input 
+            *ngIf="col.dataType == 1 || col.dataType == 2 || col.dataType === 'String' || col.dataType === 'Int'"
+            type="text"
+            [value]="newRowData()[col.columnName] || ''"
+            (input)="updateFieldValue(col.columnName, $any($event.target).value)"
+            [required]="col.isRequired"
+            placeholder="Metin girin..."
+          />
+          <input 
+            *ngIf="col.dataType == 3 || col.dataType === 'Decimal'"
+            type="number"
+            [value]="newRowData()[col.columnName] || ''"
+            (input)="updateFieldValue(col.columnName, $any($event.target).value)"
+            [required]="col.isRequired"
+            placeholder="Sayı girin..."
+          />
+          <input 
+            *ngIf="col.dataType == 4 || col.dataType === 'Date'"
+            type="date"
+            [value]="newRowData()[col.columnName] || ''"
+            (input)="updateFieldValue(col.columnName, $any($event.target).value)"
+            [required]="col.isRequired"
+          />
+          <input 
+            *ngIf="col.dataType == 5 || col.dataType === 'Boolean'"
+            type="checkbox"
+            [checked]="newRowData()[col.columnName]"
+            (change)="updateFieldValue(col.columnName, $any($event.target).checked)"
+          />
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="closeEditModal()">İptal</button>
+        <button class="btn-success" (click)="saveRow()">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Excel İçe Aktar Sonuç Modal -->
+  <div *ngIf="showImportResultModal()" class="modal-overlay" (click)="closeImportResultModal()">
+    <div class="modal import-result-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header" [ngClass]="{ 'success': importResultType() === 'success', 'error': importResultType() === 'error' }">
+        <h2>
+          <span *ngIf="importResultType() === 'success'">✅ İçe Aktarma Başarılı</span>
+          <span *ngIf="importResultType() === 'error'">❌ İçe Aktarma Hatası</span>
+        </h2>
+        <button class="btn-close" (click)="closeImportResultModal()">✕</button>
+      </div>
+
+      <div class="modal-body import-result-body">
+        <div class="result-message" [ngClass]="importResultType()">
+          {{ importResultMessage() }}
+        </div>
+
+        <!-- Success Details -->
+        <div *ngIf="importResultType() === 'success'" class="result-details">
+          <div class="detail-row">
+            <span class="label">Yüklenen Satırlar:</span>
+            <span class="value">{{ importResultDetails().importedRowsCount }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">İşlenen Tablolar:</span>
+            <span class="value">{{ importResultDetails().tablesProcessed }}</span>
+          </div>
+        </div>
+
+        <!-- Errors List -->
+        <div *ngIf="importResultErrors().length > 0" class="error-section">
+          <h3>⚠️ Hatalar ({{ importResultErrors().length }})</h3>
+          <div class="error-list">
+            <div *ngFor="let error of importResultErrors().slice(0, 10)" class="error-item">
+              • {{ error }}
+            </div>
+            <div *ngIf="importResultErrors().length > 10" class="error-item more-items">
+              ... ve {{ importResultErrors().length - 10 }} daha
+            </div>
+          </div>
+        </div>
+
+        <!-- Warnings List -->
+        <div *ngIf="importResultWarnings().length > 0" class="warning-section">
+          <h3>💡 Uyarılar ({{ importResultWarnings().length }})</h3>
+          <div class="warning-list">
+            <div *ngFor="let warning of importResultWarnings().slice(0, 10)" class="warning-item">
+              • {{ warning }}
+            </div>
+            <div *ngIf="importResultWarnings().length > 10" class="warning-item more-items">
+              ... ve {{ importResultWarnings().length - 10 }} daha
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-success" (click)="closeImportResultModal()">Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Excel to JSON Conversion Sonuç Modal -->
+  <div *ngIf="showConversionResultModal()" class="modal-overlay" (click)="closeConversionResultModal()">
+    <div class="modal conversion-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header success">
+        <h2>{{ conversionSuccessMessage() }}</h2>
+        <button class="btn-close" (click)="closeConversionResultModal()">✕</button>
+      </div>
+
+      <div class="modal-body conversion-body">
+        <div class="json-section">
+          <div class="json-header">
+            <h3>🔄 Dönüştürülen JSON</h3>
+            <button class="btn-copy" (click)="copyJsonToClipboard()" title="JSON'ı kopyala">📋 Kopyala</button>
+          </div>
+          <pre class="json-display">{{ conversionJsonPretty() }}</pre>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="closeConversionResultModal()">Kapat</button>
+        <button class="btn-conversion" (click)="convertJsonStringToExcel()">📥 JSON → Excel İndir</button>
+        <button class="btn-success" (click)="copyJsonToClipboard()">📋 Kopyala ve Kapat</button>
+      </div>
+    </div>
+  </div>

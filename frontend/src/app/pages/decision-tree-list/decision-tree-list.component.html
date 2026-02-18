@@ -1,0 +1,158 @@
+<div class="container">
+  <div class="header">
+    <div>
+      <h1>Karar Ağaçları</h1>
+    </div>
+    <button class="btn btn-success" (click)="openCreateModal()">
+      + Yeni Karar Ağacı
+    </button>
+  </div>
+
+  <!-- Yükleniyor Durumu -->
+  <div *ngIf="loading()" class="state-message">
+    <div class="spinner"></div>
+    <p>Veriler yükleniyor...</p>
+  </div>
+
+  <!-- Hata Durumu -->
+  <div *ngIf="error() && !loading()" class="state-message">
+    <p style="color: #dc2626;">⚠️ {{ error() }}</p>
+  </div>
+
+  <!-- Filtre Bölümü - Her Zaman Görünür -->
+  <div class="filter-section">
+    <h2>Filtre</h2>
+    <div class="filter-grid">
+      <div class="form-group">
+        <label for="code">Kod (Tam Eşleşme)</label>
+        <input 
+          id="code" 
+          type="text" 
+          [(ngModel)]="filter.code" 
+          placeholder="örn: dt-1"
+          (keyup.enter)="search()"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="name">Ad (İçerir)</label>
+        <input 
+          id="name" 
+          type="text" 
+          [(ngModel)]="filter.name" 
+          placeholder="örn: Customer"
+          (keyup.enter)="search()"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="status">Durum</label>
+        <select id="status" [(ngModel)]="filter.statusCode">
+          <option [ngValue]="undefined">Tümü</option>
+          <option [ngValue]="1">Aktif</option>
+          <option [ngValue]="2">Pasif</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="filter-actions">
+      <button class="btn btn-primary" (click)="search()" [disabled]="loading()">
+        {{ loading() ? 'Yükleniyor...' : 'Sorgula' }}
+      </button>
+      <button class="btn btn-secondary" (click)="clearFilters()">
+        Temizle
+      </button>
+    </div>
+  </div>
+
+  <!-- Sonuçlar -->
+  <div *ngIf="!loading()" class="results-section">
+    <div *ngIf="trees().length === 0 && hasSearched()" class="state-message">
+      <p>Arama kriterlerine uygun kayıt bulunamadı.</p>
+    </div>
+
+    <div *ngIf="trees().length > 0">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Kod</th>
+            <th>Ad</th>
+            <th>Durum</th>
+            <th>Oluşturma Tarihi</th>
+            <th>İşlemler</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let tree of trees()">
+            <td><strong>{{ tree.code }}</strong></td>
+            <td>{{ tree.name }}</td>
+            <td>
+              <span *ngIf="tree.statusCode === 1" class="status-active">✓ Aktif</span>
+              <span *ngIf="tree.statusCode === 2" class="status-passive">✗ Pasif</span>
+            </td>
+            <td>{{ tree.lastOperationDateUtc | date: 'dd.MM.yyyy' }}</td>
+            <td>
+              <button class="btn btn-sm btn-info" (click)="navigateToTables(tree.id)">
+                Tablolar
+              </button>
+              <button class="btn btn-sm btn-warning" (click)="openUpdateModal(tree)">
+                Düzenle
+              </button>
+              <button class="btn btn-sm btn-danger" (click)="deleteTree(tree, $event)">
+                Sil
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div *ngIf="showModal()" class="modal-overlay" (click)="closeModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ modalMode() === 'create' ? 'Yeni Karar Ağacı Tanımla' : 'Karar Ağacı Düzenle' }}</h2>
+      <button class="close-btn" (click)="closeModal()">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="modal-code">Karar Ağacı Kodu *</label>
+        <input 
+          id="modal-code" 
+          type="text" 
+          [(ngModel)]="form.code" 
+          placeholder="örn: DT-001"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="modal-name">Karar Ağacı Adı *</label>
+        <input 
+          id="modal-name" 
+          type="text" 
+          [(ngModel)]="form.name" 
+          placeholder="örn: Müşteri Karar Ağacı"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="modal-status">Durum *</label>
+        <select id="modal-status" [(ngModel)]="form.statusCode">
+          <option [ngValue]="1">Aktif</option>
+          <option [ngValue]="2">Pasif</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-primary" (click)="saveTree()" [disabled]="!form.code || !form.name">
+        {{ modalMode() === 'create' ? 'Kaydet' : 'Güncelle' }}
+      </button>
+    </div>
+  </div>
+</div>
